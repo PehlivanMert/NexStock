@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileText, Download, Calendar, BarChart2, X, Loader2, Plus, ChevronDown } from 'lucide-react';
+import { FileText, Download, Calendar, BarChart2, X, Loader2, Plus, ChevronDown, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStore } from '../../store/useStore';
 import * as XLSX from 'xlsx';
@@ -17,6 +17,7 @@ export default function Reports() {
   const locations = useStore(state => state.locations);
   const users = useStore(state => state.users);
   const transferLog = useStore(state => state.transferLog);
+  const countLogs = useStore(state => state.countLogs || []);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -63,13 +64,34 @@ export default function Reports() {
           'Ürün Sayısı': t.items?.length || '-',
         }));
       }
-      case 'count_diff':
-        return buildInventoryRows().map(row => ({
-          ...row,
-          'Son Sayım Tarihi': '-',
-          'Sayılan Miktar': '-',
-          'Fark': '-'
-        }));
+      case 'count_diff': {
+        const filteredCounts = dateRange.start
+          ? countLogs.filter(c => {
+              const d = new Date(c.date);
+              return d >= new Date(dateRange.start) && d <= new Date(dateRange.end + 'T23:59:59');
+            })
+          : countLogs;
+
+        if (filteredCounts.length === 0) return [{ 'Hata': 'Bu tarih aralığında sayım raporu bulunamadı.' }];
+
+        const rows = [];
+        filteredCounts.forEach(log => {
+          log.items.forEach(item => {
+            rows.push({
+              'Sayım ID': log.id,
+              'Tarih': new Date(log.date).toLocaleDateString('tr-TR'),
+              'Lokasyon': log.locationName,
+              'Ürün Adı': item.name,
+              'SKU': item.sku,
+              'Sistem Stoku': item.expected,
+              'Sayılan Miktar': item.counted,
+              'Fark': item.counted - item.expected,
+              'Durum': item.counted === item.expected ? 'Eşit' : (item.counted > item.expected ? 'Fazla' : 'Eksik'),
+            });
+          });
+        });
+        return rows;
+      }
       case 'low_stock':
         return buildInventoryRows().filter(r => r['Stok Miktarı'] < 20)
           .map(r => ({ ...r, 'Uyarı Seviyesi': r['Stok Miktarı'] < 5 ? 'KRİTİK' : 'DÜŞÜK' }));
@@ -233,6 +255,80 @@ export default function Reports() {
             </div>
           );
         })}
+      </div>
+
+      {/* Kaydedilmiş Sayım Raporları UI */}
+      <div className="mt-8">
+        <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <CheckCircle className="text-primary-600" size={20} />
+          Son Sayım Raporları (UI Görünümü)
+        </h2>
+        {countLogs.length === 0 ? (
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center text-slate-500 text-sm">
+            Henüz kaydedilmiş bir sayım raporu bulunmuyor. El terminalinden "Rapor Kaydet" diyerek ilk sayımınızı oluşturun.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {countLogs.slice().reverse().map(log => (
+              <div key={log.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-base">{log.locationName} Sayımı</h3>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      {new Date(log.date).toLocaleDateString('tr-TR')} - {new Date(log.date).toLocaleTimeString('tr-TR')}
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 text-slate-600 px-3 py-1 rounded-lg text-xs font-mono border border-slate-100">
+                    ID: {log.id.slice(-6)}
+                  </div>
+                </div>
+
+                <div className="flex gap-4 mb-4 text-sm">
+                  <div className="flex-1 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <div className="text-slate-500 text-xs mb-1">Toplam Çeşit</div>
+                    <div className="font-bold text-slate-800 text-lg">{log.totalItems}</div>
+                  </div>
+                  <div className="flex-1 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <div className="text-slate-500 text-xs mb-1">Fark / Uyuşmazlık</div>
+                    <div className={`font-bold text-lg ${log.discrepancies > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                      {log.discrepancies} ürün
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {log.items.map((item, idx) => {
+                    const diff = item.counted - item.expected;
+                    return (
+                      <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 bg-slate-50/50">
+                        <div className="min-w-0 flex-1 pr-3">
+                          <div className="text-sm font-semibold text-slate-700 truncate">{item.name}</div>
+                          <div className="text-xs text-slate-400 font-mono">{item.sku}</div>
+                        </div>
+                        <div className="flex items-center gap-4 shrink-0">
+                          <div className="text-center">
+                            <div className="text-[10px] text-slate-400">Sistem</div>
+                            <div className="text-sm font-medium text-slate-600">{item.expected}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-[10px] text-slate-400">Sayılan</div>
+                            <div className="text-sm font-bold text-slate-800">{item.counted}</div>
+                          </div>
+                          <div className={`text-center w-12 rounded bg-white border py-0.5 ${diff === 0 ? 'border-green-200 text-green-700' : diff > 0 ? 'border-yellow-200 text-yellow-700' : 'border-red-200 text-red-700'}`}>
+                            <div className="text-[10px] text-slate-400 opacity-80">Fark</div>
+                            <div className="text-sm font-bold">
+                              {diff > 0 ? `+${diff}` : diff}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
