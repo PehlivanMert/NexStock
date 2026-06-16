@@ -34,10 +34,6 @@ export default function BarcodeScanner({ onScan, onClose }) {
     if (!detectedCodes || detectedCodes.length === 0) return;
     
     const decodedText = detectedCodes[0].rawValue;
-    const now = Date.now();
-    // Debounce: prevent re-scan within 1.5s
-    if (now - lastScanTime.current < 1500) return;
-    lastScanTime.current = now;
 
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     playBeep();
@@ -82,6 +78,8 @@ export default function BarcodeScanner({ onScan, onClose }) {
             'upc_a',
             'upc_e'
           ]}
+          allowMultiple={true}
+          scanDelay={1500}
           styles={{
             container: { width: '100%', height: '100%' },
             video: { objectFit: 'cover' }
