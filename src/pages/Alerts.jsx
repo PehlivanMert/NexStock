@@ -5,15 +5,33 @@ import { useStore } from '../store/useStore';
 
 export default function Alerts() {
   const navigate = useNavigate();
+  const user = useStore(state => state.user);
   const inventory = useStore(state => state.inventory);
   const products = useStore(state => state.products);
+  const transferLog = useStore(state => state.transferLog);
+
+  // Filter for active location
+  const locationInventory = inventory.filter(i => i.locationId === user?.activeLocationId);
 
   // Generate real alerts from inventory data
-  const lowStockItems = inventory
+  const lowStockItems = locationInventory
     .filter(inv => inv.quantity < 10)
     .map(inv => ({
       productName: products.find(p => p.id === inv.productId)?.name || 'Bilinmeyen',
       quantity: inv.quantity,
+    }));
+
+  const recentTransfers = transferLog
+    .filter(t => new Date(t.date).toDateString() === new Date().toDateString())
+    .map((t, i) => ({
+      id: `trans-${i}`,
+      type: 'info',
+      title: 'Yeni Transfer İşlemi',
+      desc: `${t.user || 'Bir personel'} tarafından ${t.from} konumundan ${t.to} konumuna ${t.items?.length || 0} kalem ürün transfer edildi.`,
+      time: new Date(t.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      icon: Clock,
+      action: () => navigate('/admin/reports'),
+      actionLabel: 'Raporlara Git',
     }));
 
   const alerts = [
@@ -22,31 +40,12 @@ export default function Alerts() {
       type: 'critical',
       title: 'Kritik Stok Uyarısı',
       desc: `${item.productName} stokları kritik seviyede. (Mevcut: ${item.quantity})`,
-      time: 'Az önce',
+      time: 'Sistem',
       icon: TrendingDown,
       action: () => navigate('/admin/inventory'),
       actionLabel: 'Stokları Gör',
     })),
-    {
-      id: 'count-1',
-      type: 'warning',
-      title: 'Sayım Uyuşmazlığı',
-      desc: 'Merkez Depo A1 rafı sayımında 2 adet eksik ürün tespit edildi.',
-      time: '1 saat önce',
-      icon: AlertTriangle,
-      action: () => navigate('/count'),
-      actionLabel: 'Sayıma Git',
-    },
-    {
-      id: 'transfer-1',
-      type: 'info',
-      title: 'Transfer Onay Bekliyor',
-      desc: 'Kadıköy mağazasına yapılacak transfer onay bekliyor.',
-      time: '2 saat önce',
-      icon: Clock,
-      action: () => navigate('/transfer'),
-      actionLabel: 'Transfere Git',
-    },
+    ...recentTransfers.reverse()
   ];
 
   return (

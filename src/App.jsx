@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { useStore } from './store/useStore';
 import Login from './pages/Login';
@@ -37,6 +38,20 @@ function ProtectedRoute({ children, permission }) {
 
 function App() {
   const isLoggedIn = useStore(state => state.isLoggedIn);
+
+  useEffect(() => {
+    // Request notification permissions on load if not already granted/denied
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    // Request persistent storage
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().then(granted => {
+        if (granted) console.log("Storage will not be cleared except by explicit user action");
+        else console.log("Storage may be cleared by the UA under storage pressure.");
+      });
+    }
+  }, []);
 
   return (
     <BrowserRouter>

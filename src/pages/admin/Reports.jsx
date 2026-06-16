@@ -19,7 +19,6 @@ export default function Reports() {
   const transferLog = useStore(state => state.transferLog);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showNewReport, setShowNewReport] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [generating, setGenerating] = useState(null);
   const [reports, setReports] = useState(DEFAULT_REPORTS);
@@ -65,10 +64,12 @@ export default function Reports() {
         }));
       }
       case 'count_diff':
-        return buildInventoryRows().map(row => {
-          const counted = Math.max(0, row['Stok Miktarı'] - Math.floor(Math.random() * 3));
-          return { ...row, 'Sayılan Miktar': counted, 'Fark': row['Stok Miktarı'] - counted };
-        });
+        return buildInventoryRows().map(row => ({
+          ...row,
+          'Son Sayım Tarihi': '-',
+          'Sayılan Miktar': '-',
+          'Fark': '-'
+        }));
       case 'low_stock':
         return buildInventoryRows().filter(r => r['Stok Miktarı'] < 20)
           .map(r => ({ ...r, 'Uyarı Seviyesi': r['Stok Miktarı'] < 5 ? 'KRİTİK' : 'DÜŞÜK' }));
@@ -78,9 +79,7 @@ export default function Reports() {
           'E-posta': u.email,
           'Rol': u.role,
           'Sorumlu Lokasyon': u.location,
-          'Barkod Okutma (Mock)': Math.floor(Math.random() * 200) + 50,
           'Transfer Sayısı': transferLog.filter(t => t.user === u.name).length,
-          'Giriş Sayısı (Mock)': Math.floor(Math.random() * 100) + 20,
           'Durum': u.status,
         }));
       default:
@@ -116,14 +115,6 @@ export default function Reports() {
     }, 1200);
   };
 
-  const handleGenerateNew = (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    setReports(prev => [...prev, { id: Date.now(), key: 'weekly_stock', name: fd.get('name'), desc: fd.get('desc'), icon: '📊' }]);
-    setShowNewReport(false);
-    toast.success('Yeni rapor şablonu oluşturuldu!');
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-3">
@@ -139,10 +130,6 @@ export default function Reports() {
             <Calendar size={18} />
             Tarih Aralığı
             {dateRange.start && <span className="text-[10px] bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded font-bold">✓</span>}
-          </button>
-          <button onClick={() => setShowNewReport(true)} className="bg-primary-600 text-white px-4 py-2.5 rounded-xl font-medium shadow-sm hover:bg-primary-700 flex items-center gap-2">
-            <BarChart2 size={18} />
-            Yeni Rapor
           </button>
         </div>
       </div>
@@ -179,34 +166,6 @@ export default function Reports() {
             }} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
               Uygula
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* New Report Modal */}
-      {showNewReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-xl font-bold text-slate-800">Yeni Rapor Şablonu</h2>
-              <button onClick={() => setShowNewReport(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full"><X size={20} /></button>
-            </div>
-            <form onSubmit={handleGenerateNew} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Rapor Adı</label>
-                <input required name="name" type="text" placeholder="Örn: Aylık Depo Raporu"
-                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
-                <textarea required name="desc" rows={3} placeholder="Bu rapor neyi kapsar?"
-                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none resize-none" />
-              </div>
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowNewReport(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-xl font-medium hover:bg-slate-50">İptal</button>
-                <button type="submit" className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700">Oluştur</button>
-              </div>
-            </form>
           </div>
         </div>
       )}

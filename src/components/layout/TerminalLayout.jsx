@@ -12,8 +12,9 @@ export default function TerminalLayout() {
   const perms = ROLE_PERMISSIONS[user?.role] || {};
   const isHome = location.pathname === '/';
 
-  // Real critical count for badge
-  const criticalCount = inventory.filter(i => i.quantity < 10).length;
+  // Real critical count for badge (scoped to active location)
+  const locationInventory = inventory.filter(i => i.locationId === user?.activeLocationId);
+  const criticalCount = locationInventory.filter(i => i.quantity < 10).length;
 
   const pageTitle = {
     '/': 'NexStock',

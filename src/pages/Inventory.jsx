@@ -20,17 +20,19 @@ export default function Inventory() {
   const [editForm, setEditForm] = useState({});
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const combinedData = inventory.map(inv => {
-    const product = products.find(p => p.id === inv.productId);
-    const location = locations.find(l => l.id === inv.locationId);
-    return {
-      ...inv,
-      productName: product?.name || 'Bilinmeyen',
-      sku: product?.sku || '',
-      barcode: product?.barcode || '',
-      locationName: location?.name || '',
-    };
-  });
+  const combinedData = inventory
+    .filter(inv => inv.locationId === user?.activeLocationId)
+    .map(inv => {
+      const product = products.find(p => p.id === inv.productId);
+      const location = locations.find(l => l.id === inv.locationId);
+      return {
+        ...inv,
+        productName: product?.name || 'Bilinmeyen',
+        sku: product?.sku || '',
+        barcode: product?.barcode || '',
+        locationName: location?.name || '',
+      };
+    });
 
   const filteredData = combinedData.filter(item =>
     item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||

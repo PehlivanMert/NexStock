@@ -12,7 +12,7 @@ export default function Profile() {
   const navigate = useNavigate();
 
   const [activeModal, setActiveModal] = useState(null); // 'account' | 'notifications' | 'permissions'
-  const [accountForm, setAccountForm] = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '', password: '', newPassword: '' });
+  const [accountForm, setAccountForm] = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '', activeLocationId: user?.activeLocationId || '', password: '', newPassword: '' });
   const [showPass, setShowPass] = useState(false);
   const [notifications, setNotifications] = useState(user?.notifications || { lowStock: true, transfer: true, count: false });
 
@@ -36,6 +36,7 @@ export default function Profile() {
       name: accountForm.name,
       email: accountForm.email,
       phone: accountForm.phone,
+      activeLocationId: accountForm.activeLocationId,
     };
     if (accountForm.newPassword) updates.password = accountForm.newPassword;
     updateUser(user.id, updates);
@@ -143,6 +144,15 @@ export default function Profile() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
                 <input type="tel" value={accountForm.phone} onChange={e => setAccountForm({ ...accountForm, phone: e.target.value })}
                   className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" placeholder="+90 5xx xxx xx xx" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Aktif Lokasyon</label>
+                <select value={accountForm.activeLocationId} onChange={e => setAccountForm({ ...accountForm, activeLocationId: e.target.value })}
+                  className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none">
+                  {locations.filter(l => l.status === 'active').map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="border-t border-slate-100 pt-4">
                 <p className="text-xs text-slate-500 mb-3">Şifreyi değiştirmek için doldur:</p>
