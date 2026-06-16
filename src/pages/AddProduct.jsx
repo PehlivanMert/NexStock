@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { ScanBarcode, Plus, Image as ImageIcon } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import BarcodeScanner from '../components/scanner/BarcodeScanner';
 import { toast } from 'sonner';
 
 export default function AddProduct() {
   const navigate = useNavigate();
+  const location = useLocation();
   const locations = useStore(state => state.locations);
   const addProduct = useStore(state => state.addProduct);
+  const [isScanning, setIsScanning] = useState(false);
   const [formData, setFormData] = useState({
-    name: '', sku: '', barcode: '', quantity: '', locationId: '', shelf: ''
+    name: '', sku: '', barcode: location.state?.barcode || '', quantity: '', locationId: '', shelf: ''
   });
 
   const handleSubmit = (e) => {
@@ -29,6 +32,15 @@ export default function AddProduct() {
     toast.success('Ürün başarıyla eklendi!');
     navigate(-1);
   };
+
+  if (isScanning) {
+    return (
+      <BarcodeScanner 
+        onScan={(code) => { setFormData({ ...formData, barcode: code }); setIsScanning(false); }} 
+        onClose={() => setIsScanning(false)} 
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
@@ -67,9 +79,9 @@ export default function AddProduct() {
                 className="flex-1 p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none font-mono"
                 placeholder="Okutun veya yazın"
               />
-              <Link to="/scan" className="p-3 bg-primary-100 text-primary-600 rounded-xl hover:bg-primary-200">
+              <button type="button" onClick={() => setIsScanning(true)} className="p-3 bg-primary-100 text-primary-600 rounded-xl hover:bg-primary-200">
                 <ScanBarcode size={24} />
-              </Link>
+              </button>
             </div>
           </div>
 

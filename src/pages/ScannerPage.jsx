@@ -136,7 +136,7 @@ export default function ScannerPage() {
                   Yeniden Tara
                 </button>
                 <button
-                  onClick={() => navigate('/add')}
+                  onClick={() => navigate('/add', { state: { barcode: scannedData } })}
                   className="flex-1 py-3 bg-primary-600 text-white rounded-xl font-medium shadow-lg shadow-primary-500/30"
                 >
                   Ürün Ekle
