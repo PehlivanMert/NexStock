@@ -78,6 +78,7 @@ export const useStore = create(
       ],
 
       transferLog: [],
+      countLogs: [],
 
       // ─── UI STATE ────────────────────────────────────────────
       activeLocation: null,
@@ -143,6 +144,24 @@ export const useStore = create(
       updateInventoryItem: (id, updates) => set((state) => ({
         inventory: state.inventory.map(inv => inv.id === id ? { ...inv, ...updates } : inv),
       })),
+
+      saveCountLog: (locationId, countData) => set((state) => {
+        const locName = state.locations.find(l => l.id === locationId)?.name || locationId;
+        const totalItems = countData.length;
+        const discrepancies = countData.filter(c => c.counted !== c.expected).length;
+        return {
+          countLogs: [...state.countLogs, {
+            id: `count-${Date.now()}`,
+            date: new Date().toISOString(),
+            locationId,
+            locationName: locName,
+            user: state.user?.name || 'Bilinmeyen',
+            totalItems,
+            discrepancies,
+            items: countData
+          }]
+        };
+      }),
 
       // ─── TRANSFER ────────────────────────────────────────────
       performTransfer: (sourceLocId, destLocId, selectedProducts) => set((state) => {

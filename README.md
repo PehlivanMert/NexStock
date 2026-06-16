@@ -2,7 +2,7 @@
 
 NexStock, mağazalar ve depolar arası envanter/stok takibini sağlamak amacıyla geliştirilmiş, "offline-first" (çevrimdışı çalışabilen) modern bir PWA (Progressive Web App) projesidir. Sistem, masaüstünde kapsamlı bir "Yönetim Paneli", mobil cihazlarda ise "El Terminali" hissiyatıyla çalışacak şekilde tasarlanmıştır.
 
-## 🚀 Sürüm Durumu: Production-Ready (v1.1.0)
+## 🚀 Sürüm Durumu: Production-Ready (v1.1.1)
 
 Bu sürüm ile birlikte uygulama PWA tarafında tam mobil uyumluluk, yüksek hızlı kamera optimizasyonları ve kusursuz sayım mantığı ile güncellenmiştir.
 

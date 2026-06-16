@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ScanBarcode, Save, MapPin } from 'lucide-react';
+import { ScanBarcode, Save, MapPin, CheckCircle } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import BarcodeScanner from '../components/scanner/BarcodeScanner';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ export default function Count() {
   const products = useStore(state => state.products);
   const inventory = useStore(state => state.inventory);
   const updateInventoryCount = useStore(state => state.updateInventoryCount);
+  const saveCountLog = useStore(state => state.saveCountLog);
   
   const [selectedLocation, setSelectedLocation] = useState('');
   const [countingData, setCountingData] = useState([]);
@@ -42,15 +43,31 @@ export default function Count() {
     ));
   };
 
-  const handleSave = () => {
-    countingData.forEach(item => {
-      // Only update if they counted it (if they didn't count, we don't automatically set it to 0 unless we explicitly want to)
-      // Usually, sayım overwrites everything. If they clicked save, their counted values are the new truth.
-      if (item.counted !== item.expected) {
-        updateInventoryCount(selectedLocation, item.productId, item.counted);
-      }
+  const handleSaveReport = () => {
+    const countedItems = countingData.filter(item => item.counted > 0);
+    if (countedItems.length === 0) {
+      toast.error("Kaydedilecek okutulmuş ürün yok.");
+      return;
+    }
+    saveCountLog(selectedLocation, countedItems);
+    toast.success("Sayım Raporu kaydedildi! (Stoklar değişmedi)");
+    setCountingData(prev => prev.map(item => ({ ...item, counted: 0 })));
+  };
+
+  const handleSyncInventory = () => {
+    const countedItems = countingData.filter(item => item.counted > 0);
+    if (countedItems.length === 0) {
+      toast.error("Senkronize edilecek okutulmuş ürün yok.");
+      return;
+    }
+    if (!window.confirm('Emin misiniz? Okuttuğunuz değerler sistem stoklarının üzerine yazılacak.')) return;
+    
+    countedItems.forEach(item => {
+      updateInventoryCount(selectedLocation, item.productId, item.counted);
     });
-    toast.success("Sayım başarıyla kaydedildi ve stoklar güncellendi!");
+    saveCountLog(selectedLocation, countedItems);
+    toast.success("Stoklar başarıyla senkronize edildi!");
+    setCountingData(prev => prev.map(item => ({ ...item, counted: 0 })));
   };
 
   const handleScan = (barcode) => {
@@ -108,19 +125,19 @@ export default function Count() {
           className="w-full py-4 bg-primary-600 text-white rounded-xl flex items-center justify-center gap-3 shadow-lg shadow-primary-500/30 active:scale-95 transition-transform"
         >
           <ScanBarcode size={24} />
-          <span className="font-bold text-lg">Barkod Okut (+1 Say)</span>
+          <span className="font-bold text-lg">Barkod Okut</span>
         </button>
 
         {selectedLocation ? (
           <div className="space-y-3 mt-4">
             <h3 className="font-semibold text-slate-700 px-1">Sayım Listesi</h3>
             
-            {countingData.length === 0 ? (
+            {countingData.filter(item => item.counted > 0).length === 0 ? (
               <p className="text-slate-500 text-sm p-4 text-center bg-white rounded-xl border border-slate-200">
-                Bu lokasyonda listelenmiş ürün bulunamadı.
+                Henüz hiçbir ürün okutulmadı. Sadece okuttuğunuz ürünler burada listelenir.
               </p>
             ) : (
-              countingData.map((item) => {
+              countingData.filter(item => item.counted > 0).map((item) => {
                 const diff = item.counted - item.expected;
                 const isMatch = diff === 0;
                 const isMissing = diff < 0;
@@ -164,14 +181,22 @@ export default function Count() {
         )}
       </div>
 
-      <div className="p-4 bg-white border-t border-slate-200">
+      <div className="p-4 bg-white border-t border-slate-200 flex gap-3">
         <button 
-          onClick={handleSave}
-          disabled={!selectedLocation || countingData.length === 0}
-          className="w-full py-3 bg-slate-800 text-white rounded-xl font-medium shadow-md flex justify-center items-center gap-2 hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          onClick={handleSaveReport}
+          disabled={!selectedLocation || countingData.filter(i => i.counted > 0).length === 0}
+          className="flex-1 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-medium flex justify-center items-center gap-2 hover:bg-slate-50 disabled:opacity-50 transition-colors"
         >
           <Save size={20} />
-          <span>Sayımı Kaydet</span>
+          <span>Rapor Kaydet</span>
+        </button>
+        <button 
+          onClick={handleSyncInventory}
+          disabled={!selectedLocation || countingData.filter(i => i.counted > 0).length === 0}
+          className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-medium shadow-md flex justify-center items-center gap-2 hover:bg-slate-900 disabled:opacity-50 transition-colors"
+        >
+          <CheckCircle size={20} />
+          <span>Stoku Güncelle</span>
         </button>
       </div>
     </div>
