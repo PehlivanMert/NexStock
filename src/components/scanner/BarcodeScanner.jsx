@@ -78,6 +78,10 @@ export default function BarcodeScanner({ onScan, onClose }) {
             'upc_a',
             'upc_e'
           ]}
+          constraints={{
+            facingMode: 'environment',
+            advanced: [{ zoom: 2.0 }]
+          }}
           allowMultiple={true}
           scanDelay={1500}
           styles={{
