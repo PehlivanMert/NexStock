@@ -34,12 +34,16 @@ export default function BarcodeScanner({ onScan, onClose }) {
     html5QrcodeRef.current = scanner;
 
     scanner.start(
-      { facingMode: 'environment' },
+      { facingMode: { exact: "environment" } },
       {
-        fps: 15, // Higher FPS = faster scanning
+        fps: 30, // Maximize FPS for speed
         qrbox: { width: 280, height: 160 },
         aspectRatio: 1.0,
         disableFlip: false,
+        videoConstraints: {
+          facingMode: { exact: "environment" },
+          advanced: [{ focusMode: "continuous" }, { zoom: 1.5 }]
+        }
       },
       (decodedText) => {
         const now = Date.now();

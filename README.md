@@ -7,13 +7,14 @@ NexStock, mağazalar ve depolar arası envanter/stok takibini sağlamak amacıyl
 Bu sürüm ile birlikte uygulama tüm yerel (local) fonksiyonlarıyla **canlı ortama (production) hazır** hale gelmiştir. Firebase entegrasyonu öncesinde tüm veri mantığı, yetkilendirmeler ve raporlamalar LocalStorage üzerinde eksiksiz çalışmaktadır.
 
 ### ✨ Temel Özellikler
-- **Kamera Tabanlı Barkod Okuma:** `html5-qrcode` ile entegre edilen yüksek performanslı, sesli ("bip") ve dokunsal titreşimli barkod/karekod okuyucu. Barkoddan direkt ürün bulma ve hızlı işlem.
-- **PWA Desteği:** Ana ekrana eklenebilme, otomatik güncelleme, servis worker üzerinden önbellekleme ve çevrimdışı kullanım.
-- **Responsive Tasarım (Glassmorphism):** Tailwind CSS ile kurgulanan modern tasarım. İki farklı görünüme sahiptir:
+- **Yüksek Hızlı Barkod Okuyucu:** `html5-qrcode` kütüphanesi; arka kamerayı (environment) zorlayacak, yakın çekim makro odaklaması yapacak (`zoom: 1.5, focusMode: continuous`) ve 30 FPS'de tarayacak şekilde optimize edildi. Sesli ("bip") ve dokunsal titreşimli geri bildirim sunar.
+- **Kesintisiz Sayım Modülü (Continuous Counting):** Depo sayımlarında her okutmada ürünü otomatik olarak "+1" sayar. Kullanıcıyı sayfa değiştirmeye zorlamadan arka planda sayımı toplar.
+- **PWA Otomatik Güncelleme:** `vite-plugin-pwa` ile PWA yapılandırıldı. Sunucuda yeni bir versiyon yayınlandığında cihazlar güncellemeyi algılar ve arka planda sessizce (autoUpdate) güncellenir.
+- **iOS Uyumluluğu:** PWA ikonlarının iOS cihazlarda (iPhone) etrafında beyaz çerçeve çıkması problemi Apple'a özel `<link rel="apple-touch-icon">` etiketleri kullanılarak engellenmiştir.
+- **Responsive Tasarım (Glassmorphism):** Tailwind CSS ile kurgulanan modern tasarım.
   - **Terminal (Mobil) Layout:** Sahada çalışan personel için sekmeli alt bar ve hız odaklı tasarım.
   - **Dashboard (Masaüstü) Layout:** Yönetici ve müdürler için geniş istatistik, tablo ve ayar ekranları.
 - **Kapsamlı Raporlama:** Tarih filtreli, akıllı isimlendirmeli ve geçmiş kaydı tutan gerçek **Excel (.xlsx)** dışa aktarım sistemi.
-- **Dinamik Yönetim Özeti:** Aktif depoların durumu, gerçek zamanlı toplam transfer ve kritik ürün sayıları analizleri.
 
 ---
 

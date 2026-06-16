@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ScanBarcode, Save, MapPin } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import BarcodeScanner from '../components/scanner/BarcodeScanner';
+import { toast } from 'sonner';
 
 export default function Count() {
   const locations = useStore(state => state.locations);
@@ -11,6 +12,7 @@ export default function Count() {
   
   const [selectedLocation, setSelectedLocation] = useState('');
   const [countingData, setCountingData] = useState([]);
+  const [isScanning, setIsScanning] = useState(false);
 
   // Filter inventory based on selected location
   useEffect(() => {
@@ -28,7 +30,7 @@ export default function Count() {
         name: product?.name || 'Bilinmeyen Ürün',
         sku: product?.sku || '-',
         expected: inv.quantity,
-        counted: inv.quantity, // Default to expected, user modifies this
+        counted: 0, // Always start count from 0 for active physical counting
       };
     });
     setCountingData(mappedData);
@@ -42,12 +44,40 @@ export default function Count() {
 
   const handleSave = () => {
     countingData.forEach(item => {
+      // Only update if they counted it (if they didn't count, we don't automatically set it to 0 unless we explicitly want to)
+      // Usually, sayım overwrites everything. If they clicked save, their counted values are the new truth.
       if (item.counted !== item.expected) {
         updateInventoryCount(selectedLocation, item.productId, item.counted);
       }
     });
-    alert("Sayım başarıyla kaydedildi ve stoklar güncellendi!");
+    toast.success("Sayım başarıyla kaydedildi ve stoklar güncellendi!");
   };
+
+  const handleScan = (barcode) => {
+    // Find the product
+    const product = products.find(p => p.barcode === barcode || p.sku === barcode || p.id === barcode);
+    if (!product) {
+      toast.error('Bu barkoda ait ürün sistemde bulunamadı!');
+      setIsScanning(false);
+      return;
+    }
+
+    // Check if product is in this location's list
+    const inList = countingData.find(c => c.productId === product.id);
+    if (inList) {
+      setCountingData(prev => prev.map(item => 
+        item.productId === product.id ? { ...item, counted: item.counted + 1 } : item
+      ));
+      toast.success(`${product.name} sayıldı! Toplam: ${inList.counted + 1}`);
+    } else {
+      toast.error('Bu ürün mevcut lokasyona ait değil.');
+    }
+    setIsScanning(false);
+  };
+
+  if (isScanning) {
+    return <BarcodeScanner onScan={handleScan} onClose={() => setIsScanning(false)} />;
+  }
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
@@ -70,10 +100,16 @@ export default function Count() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <Link to="/scan" className="w-full py-4 bg-primary-600 text-white rounded-xl flex items-center justify-center gap-3 shadow-lg shadow-primary-500/30 active:scale-95 transition-transform">
+        <button 
+          onClick={() => {
+            if(!selectedLocation) { toast.error("Önce lokasyon seçin"); return; }
+            setIsScanning(true);
+          }} 
+          className="w-full py-4 bg-primary-600 text-white rounded-xl flex items-center justify-center gap-3 shadow-lg shadow-primary-500/30 active:scale-95 transition-transform"
+        >
           <ScanBarcode size={24} />
-          <span className="font-bold text-lg">Barkod Okut</span>
-        </Link>
+          <span className="font-bold text-lg">Barkod Okut (+1 Say)</span>
+        </button>
 
         {selectedLocation ? (
           <div className="space-y-3 mt-4">
