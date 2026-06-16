@@ -36,13 +36,12 @@ export default function BarcodeScanner({ onScan, onClose }) {
     scanner.start(
       { facingMode: { exact: "environment" } },
       {
-        fps: 30, // Maximize FPS for speed
-        qrbox: { width: 280, height: 160 },
+        fps: 60, // Maximize FPS for speed
         aspectRatio: 1.0,
         disableFlip: false,
         videoConstraints: {
           facingMode: { exact: "environment" },
-          advanced: [{ focusMode: "continuous" }, { zoom: 1.5 }]
+          advanced: [{ focusMode: "continuous" }, { zoom: 3.0 }]
         }
       },
       (decodedText) => {

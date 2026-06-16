@@ -2,19 +2,16 @@
 
 NexStock, mağazalar ve depolar arası envanter/stok takibini sağlamak amacıyla geliştirilmiş, "offline-first" (çevrimdışı çalışabilen) modern bir PWA (Progressive Web App) projesidir. Sistem, masaüstünde kapsamlı bir "Yönetim Paneli", mobil cihazlarda ise "El Terminali" hissiyatıyla çalışacak şekilde tasarlanmıştır.
 
-## 🚀 Sürüm Durumu: Production-Ready (v1.0.0)
+## 🚀 Sürüm Durumu: Production-Ready (v1.1.0)
 
-Bu sürüm ile birlikte uygulama tüm yerel (local) fonksiyonlarıyla **canlı ortama (production) hazır** hale gelmiştir. Firebase entegrasyonu öncesinde tüm veri mantığı, yetkilendirmeler ve raporlamalar LocalStorage üzerinde eksiksiz çalışmaktadır.
+Bu sürüm ile birlikte uygulama PWA tarafında tam mobil uyumluluk, yüksek hızlı kamera optimizasyonları ve kusursuz sayım mantığı ile güncellenmiştir.
 
 ### ✨ Temel Özellikler
-- **Yüksek Hızlı Barkod Okuyucu:** `html5-qrcode` kütüphanesi; arka kamerayı (environment) zorlayacak, yakın çekim makro odaklaması yapacak (`zoom: 1.5, focusMode: continuous`) ve 30 FPS'de tarayacak şekilde optimize edildi. Sesli ("bip") ve dokunsal titreşimli geri bildirim sunar.
-- **Kesintisiz Sayım Modülü (Continuous Counting):** Depo sayımlarında her okutmada ürünü otomatik olarak "+1" sayar. Kullanıcıyı sayfa değiştirmeye zorlamadan arka planda sayımı toplar.
-- **PWA Otomatik Güncelleme:** `vite-plugin-pwa` ile PWA yapılandırıldı. Sunucuda yeni bir versiyon yayınlandığında cihazlar güncellemeyi algılar ve arka planda sessizce (autoUpdate) güncellenir.
-- **iOS Uyumluluğu:** PWA ikonlarının iOS cihazlarda (iPhone) etrafında beyaz çerçeve çıkması problemi Apple'a özel `<link rel="apple-touch-icon">` etiketleri kullanılarak engellenmiştir.
-- **Responsive Tasarım (Glassmorphism):** Tailwind CSS ile kurgulanan modern tasarım.
-  - **Terminal (Mobil) Layout:** Sahada çalışan personel için sekmeli alt bar ve hız odaklı tasarım.
-  - **Dashboard (Masaüstü) Layout:** Yönetici ve müdürler için geniş istatistik, tablo ve ayar ekranları.
-- **Kapsamlı Raporlama:** Tarih filtreli, akıllı isimlendirmeli ve geçmiş kaydı tutan gerçek **Excel (.xlsx)** dışa aktarım sistemi.
+- **Yüksek Hızlı Barkod Okuyucu (60 FPS):** `html5-qrcode` kütüphanesi; 60 FPS tarama hızı, `qrbox` (kutucuk) sınırlamasının kaldırılarak tüm ekranın tarama alanına çevrilmesi ve kameranın direkt arka-makro lense (zoom: 3.0) zorlanmasıyla muazzam hızlandırıldı. Barkodu ekranda gördüğü salise algılar.
+- **Kesintisiz Sayım Modülü & Raporlama:** Depo sayımlarında her okutmada ürünü otomatik olarak "+1" sayar. Sayım esnasında ana stoku bozmaz; sayım tamamlanıp "Kaydet" denildiğinde ise sistem stoku ile sayılan stok arasındaki farkları net şekilde göstererek günceller.
+- **Responsive Yönetim Paneli (PWA Admin Layout):** Yönetim (Admin) paneli artık PWA mobil görünümüne %100 uyumludur. Yan menü (sidebar) mobil ekranlarda akıllıca gizlenerek "Hamburger Menu" yapısına geçirilmiş, ekran ferahlatılmıştır.
+- **PWA Otomatik Güncelleme:** `vite-plugin-pwa` ile arka planda sessizce (autoUpdate ve immediate) güncellenir. Kullanıcı hiçbir şey yapmadan hep en güncel sürümü kullanır.
+- **iOS Kusursuz Uyumluluk:** PWA ikonlarının iOS cihazlarda (iPhone) etrafında beyaz çerçeve çıkması problemi Apple'a özel `<link rel="apple-touch-icon">` etiketleri kullanılarak ve ikon alt yapısı şeffaflıktan arındırılarak engellenmiştir.
 
 ---
 

@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, MapPin, Package, FileText, Settings, LogOut, Upload, ChevronDown, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { LayoutDashboard, Users, MapPin, Package, FileText, Settings, LogOut, Upload, ChevronDown, Shield, Menu } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useStore, ROLE_PERMISSIONS } from '../../store/useStore';
 import { toast } from 'sonner';
 
@@ -12,6 +12,12 @@ export default function DashboardLayout() {
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
 
   const perms = ROLE_PERMISSIONS[user?.role] || {};
   const roleName = { admin: 'Yönetici', manager: 'Müdür', staff: 'Personel' }[user?.role] || user?.role;
@@ -41,10 +47,15 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden relative">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-20 bg-black/50 lg:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
-        <div className="h-16 flex items-center px-5 border-b border-slate-100">
+      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 transform transition-transform duration-200 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="h-14 lg:h-16 flex items-center px-5 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-primary-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">N</div>
             <div>
@@ -105,8 +116,13 @@ export default function DashboardLayout() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
-          <h2 className="text-base font-semibold text-slate-800">{pageName}</h2>
+        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 rounded-lg text-slate-500 lg:hidden hover:bg-slate-100 active:bg-slate-200">
+              <Menu size={20} />
+            </button>
+            <h2 className="text-base font-semibold text-slate-800">{pageName}</h2>
+          </div>
 
           <div className="flex items-center gap-2">
             <Link to="/" className="text-xs font-medium text-primary-600 bg-primary-50 px-3 py-1.5 rounded-lg hover:bg-primary-100 transition-colors">
