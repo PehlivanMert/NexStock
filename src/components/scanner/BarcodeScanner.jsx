@@ -1,26 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import { useStore } from '../../store/useStore';
-import { X, Zap, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export default function BarcodeScanner({ onScan, onClose }) {
-  const scannerRef = useRef(null);
-  const html5QrcodeRef = useRef(null);
   const setScanning = useStore((state) => state.setScanning);
-  const [isFlashOn, setIsFlashOn] = useState(false);
   const [scanState, setScanState] = useState('scanning'); // scanning | success | error
   const [lastScanned, setLastScanned] = useState(null);
   const lastScanTime = useRef(0);
 
-  const playBeep = (type = 'success') => {
+  const playBeep = () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
       oscillator.connect(gainNode);
       gainNode.connect(audioCtx.destination);
-      oscillator.type = type === 'success' ? 'sine' : 'square';
-      oscillator.frequency.setValueAtTime(type === 'success' ? 1200 : 400, audioCtx.currentTime);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(1200, audioCtx.currentTime);
       gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
       oscillator.start();
@@ -30,63 +27,30 @@ export default function BarcodeScanner({ onScan, onClose }) {
 
   useEffect(() => {
     setScanning(true);
-    const scanner = new Html5Qrcode("reader");
-    html5QrcodeRef.current = scanner;
-
-    scanner.start(
-      { facingMode: { exact: "environment" } },
-      {
-        fps: 30, // 30 is optimal for mobile processors
-        qrbox: (viewfinderWidth, viewfinderHeight) => {
-          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          return { width: minEdge * 0.8, height: minEdge * 0.8 };
-        },
-        aspectRatio: 1.0,
-        disableFlip: false,
-        videoConstraints: {
-          facingMode: { exact: "environment" },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
-      },
-      (decodedText) => {
-        const now = Date.now();
-        // Debounce: prevent re-scan within 1.5s
-        if (now - lastScanTime.current < 1500) return;
-        lastScanTime.current = now;
-
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        playBeep('success');
-        setScanState('success');
-        setLastScanned(decodedText);
-
-        // Pass to parent then reset after 1.2s
-        setTimeout(() => {
-          onScan(decodedText);
-        }, 500);
-      },
-      () => { /* scan errors are normal — ignore */ }
-    ).catch(err => {
-      console.error('Camera start failed', err);
-      setScanState('error');
-    });
-
-    return () => {
-      setScanning(false);
-      if (html5QrcodeRef.current?.isScanning) {
-        html5QrcodeRef.current.stop().catch(() => {});
-      }
-    };
+    return () => setScanning(false);
   }, []);
 
-  const toggleFlash = async () => {
-    const h = html5QrcodeRef.current;
-    if (h?.isScanning) {
-      try {
-        await h.applyVideoConstraints({ advanced: [{ torch: !isFlashOn }] });
-        setIsFlashOn(v => !v);
-      } catch (err) { /* not supported on all devices */ }
-    }
+  const handleScan = (detectedCodes) => {
+    if (!detectedCodes || detectedCodes.length === 0) return;
+    
+    const decodedText = detectedCodes[0].rawValue;
+    const now = Date.now();
+    // Debounce: prevent re-scan within 1.5s
+    if (now - lastScanTime.current < 1500) return;
+    lastScanTime.current = now;
+
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    playBeep();
+    setScanState('success');
+    setLastScanned(decodedText);
+
+    // Pass to parent
+    onScan(decodedText);
+    
+    // Reset UI state quickly for next scan
+    setTimeout(() => {
+      setScanState('scanning');
+    }, 1200);
   };
 
   return (
@@ -97,21 +61,38 @@ export default function BarcodeScanner({ onScan, onClose }) {
           <X size={22} />
         </button>
         <div className="text-sm font-medium text-white/70">
-          {scanState === 'success' ? '✅ Barkod Okundu' : 'Barkodu Çerçeve İçine Hizalayın'}
+          {scanState === 'success' ? '✅ Barkod Okundu' : 'Kamerayı Barkoda Yaklaştırın'}
         </div>
-        <button
-          onClick={toggleFlash}
-          className={`p-2.5 rounded-full border transition-colors ${isFlashOn ? 'bg-yellow-400 border-yellow-400 text-black' : 'bg-black/50 border-white/10 text-white'}`}
-        >
-          <Zap size={22} />
-        </button>
+        <div className="w-10"></div> {/* Spacer for centering */}
       </div>
 
       {/* Camera View */}
-      <div className="flex-1 relative overflow-hidden flex items-center justify-center">
-        <div id="reader" className="w-full h-full" />
+      <div className="flex-1 relative overflow-hidden bg-slate-900 flex items-center justify-center">
+        <Scanner 
+          onScan={handleScan}
+          onError={(err) => {
+            console.error('QR Scanner error:', err);
+            // Ignore minor errors, only show state error if fatal
+          }}
+          formats={[
+            'qr_code',
+            'ean_13',
+            'ean_8',
+            'code_128',
+            'upc_a',
+            'upc_e'
+          ]}
+          styles={{
+            container: { width: '100%', height: '100%' },
+            video: { objectFit: 'cover' }
+          }}
+          components={{
+            audio: false,
+            finder: false, // We will use our own custom finder overlay
+          }}
+        />
 
-        {/* Dark overlay with cutout (CSS trick) */}
+        {/* Custom Overlay */}
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
           <div className="relative w-72 h-44">
             {/* Corner markers */}
@@ -162,9 +143,9 @@ export default function BarcodeScanner({ onScan, onClose }) {
           </div>
         ) : (
           <div className="text-center">
-            <div className="text-sm text-slate-400">Barkod veya QR Kodu Desteklenir</div>
+            <div className="text-sm text-slate-400">Yeni Nesil Tarayıcı Motoru Aktif</div>
             <div className="flex justify-center gap-3 mt-3">
-              {['EAN-13', 'CODE-128', 'QR', 'UPC'].map(t => (
+              {['EAN', 'CODE-128', 'QR', 'UPC'].map(t => (
                 <span key={t} className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded">{t}</span>
               ))}
             </div>

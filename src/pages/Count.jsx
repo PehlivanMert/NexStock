@@ -89,7 +89,7 @@ export default function Count() {
     } else {
       toast.error('Bu ürün mevcut lokasyona ait değil.');
     }
-    setIsScanning(false);
+    // DO NOT CLOSE SCANNER: setIsScanning(false);
   };
 
   if (isScanning) {

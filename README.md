@@ -2,13 +2,13 @@
 
 NexStock, mağazalar ve depolar arası envanter/stok takibini sağlamak amacıyla geliştirilmiş, "offline-first" (çevrimdışı çalışabilen) modern bir PWA (Progressive Web App) projesidir. Sistem, masaüstünde kapsamlı bir "Yönetim Paneli", mobil cihazlarda ise "El Terminali" hissiyatıyla çalışacak şekilde tasarlanmıştır.
 
-## 🚀 Sürüm Durumu: Production-Ready (v1.1.1)
+## 🚀 Sürüm Durumu: Production-Ready (v1.2.0)
 
 Bu sürüm ile birlikte uygulama PWA tarafında tam mobil uyumluluk, yüksek hızlı kamera optimizasyonları ve kusursuz sayım mantığı ile güncellenmiştir.
 
 ### ✨ Temel Özellikler
-- **Yüksek Hızlı Barkod Okuyucu (60 FPS):** `html5-qrcode` kütüphanesi; 60 FPS tarama hızı, `qrbox` (kutucuk) sınırlamasının kaldırılarak tüm ekranın tarama alanına çevrilmesi ve kameranın direkt arka-makro lense (zoom: 3.0) zorlanmasıyla muazzam hızlandırıldı. Barkodu ekranda gördüğü salise algılar.
-- **Kesintisiz Sayım Modülü & Raporlama:** Depo sayımlarında her okutmada ürünü otomatik olarak "+1" sayar. Sayım esnasında ana stoku bozmaz; sayım tamamlanıp "Kaydet" denildiğinde ise sistem stoku ile sayılan stok arasındaki farkları net şekilde göstererek günceller.
+- **Yeni Nesil Barkod Okuyucu (WebAssembly & ZXing):** Eski tarayıcı motoru tamamen kaldırılarak yerine `@yudiel/react-qr-scanner` entegre edildi. WebAssembly tabanlı bu yeni motor sayesinde her türlü ışık, bulanıklık ve açıda inanılmaz hızlı ve kararlı barkod okuma sağlanır.
+- **Kesintisiz Sayım Modülü & Raporlama:** Depo sayımlarında kamerayı her okutmada **kapatmaz**, kesintisiz (+1) sayıma devam edebilirsiniz. Sayım esnasında ana stoku bozmaz; sayım tamamlanıp "Kaydet" denildiğinde ise sistem stoku ile sayılan stok arasındaki farkları net şekilde göstererek günceller.
 - **Responsive Yönetim Paneli (PWA Admin Layout):** Yönetim (Admin) paneli artık PWA mobil görünümüne %100 uyumludur. Yan menü (sidebar) mobil ekranlarda akıllıca gizlenerek "Hamburger Menu" yapısına geçirilmiş, ekran ferahlatılmıştır.
 - **PWA Otomatik Güncelleme:** `vite-plugin-pwa` ile arka planda sessizce (autoUpdate ve immediate) güncellenir. Kullanıcı hiçbir şey yapmadan hep en güncel sürümü kullanır.
 - **iOS Kusursuz Uyumluluk:** PWA ikonlarının iOS cihazlarda (iPhone) etrafında beyaz çerçeve çıkması problemi Apple'a özel `<link rel="apple-touch-icon">` etiketleri kullanılarak ve ikon alt yapısı şeffaflıktan arındırılarak engellenmiştir.
