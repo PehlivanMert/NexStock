@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ScanBarcode, Package, User, Bell, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Home, ScanBarcode, Package, User, Bell, ArrowLeft, Zap } from 'lucide-react';
 import { useStore, ROLE_PERMISSIONS } from '../../store/useStore';
 
 export default function TerminalLayout() {
@@ -27,85 +27,134 @@ export default function TerminalLayout() {
     '/add': 'Ürün Ekle',
   }[location.pathname] || 'NexStock';
 
+  const navItems = [
+    { path: '/', icon: Home, label: 'Ana Sayfa', show: true },
+    { path: '/scan', icon: ScanBarcode, label: 'Tara', show: true, isCTA: true },
+    { path: '/inventory', icon: Package, label: 'Stok', show: true },
+    { path: '/alerts', icon: Bell, label: 'Uyarılar', badge: criticalCount, show: true },
+    { path: '/profile', icon: User, label: 'Profil', show: true },
+  ].filter(n => n.show);
+
   return (
-    <div className="flex flex-col h-screen bg-slate-50 max-w-lg mx-auto">
-      {/* Header */}
+    <div className="flex flex-col bg-slate-50" style={{ height: '100dvh' }}>
+      {/* ── Header ─────────────────────────────────────────── */}
       {!isScanning && (
-        <header className="bg-white border-b border-slate-100 px-4 h-14 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            {!isHome ? (
-              <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-slate-600 hover:text-primary-600 rounded-full hover:bg-slate-100 transition-colors">
-                <ArrowLeft size={20} />
-              </button>
-            ) : (
-              <div className="h-7 w-7 rounded-lg bg-primary-600 text-white flex items-center justify-center font-bold text-xs">N</div>
-            )}
-            <h1 className="font-bold text-base text-slate-800">{pageTitle}</h1>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {/* Alert badge */}
-            <Link to="/alerts" className="relative p-2 text-slate-400 hover:text-orange-500 transition-colors">
-              <Bell size={20} />
-              {criticalCount > 0 && (
-                <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                  {criticalCount}
-                </span>
+        <header
+          className="glass border-b border-slate-200/60 shrink-0 z-20"
+          style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        >
+          <div className="h-14 px-4 flex items-center justify-between max-w-lg mx-auto w-full">
+            <div className="flex items-center gap-2.5">
+              {!isHome ? (
+                <button
+                  onClick={() => navigate(-1)}
+                  className="p-2 -ml-2 text-slate-600 hover:text-primary-600 rounded-xl hover:bg-primary-50 transition-all active:scale-90"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+              ) : (
+                <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white flex items-center justify-center shadow-md shadow-primary-500/30">
+                  <Zap size={16} className="fill-white" />
+                </div>
               )}
-            </Link>
+              <h1 className="font-bold text-base text-slate-800 tracking-tight">{pageTitle}</h1>
+            </div>
 
-            {/* Admin panel shortcut (role-based) */}
-            {perms.canAccessAdmin && (
-              <Link to="/admin" className="text-xs font-bold bg-slate-800 text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-700 transition-colors">
-                Yönetim →
-              </Link>
-            )}
+            <div className="flex items-center gap-1">
+              {/* Admin shortcut */}
+              {perms.canAccessAdmin && (
+                <Link
+                  to="/admin"
+                  className="text-xs font-bold bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-colors"
+                >
+                  Yönetim →
+                </Link>
+              )}
+            </div>
           </div>
         </header>
       )}
 
-      {/* Main */}
-      <main className="flex-1 overflow-y-auto relative">
+      {/* ── Main Content ────────────────────────────────────── */}
+      <main className="flex-1 overflow-y-auto relative min-h-0">
         <Outlet />
       </main>
 
-      {/* Bottom Navigation */}
+      {/* ── Bottom Navigation ───────────────────────────────── */}
       {!isScanning && (
-        <nav className="bg-white border-t border-slate-200 flex items-center justify-around shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          {[
-            { path: '/', icon: Home, label: 'Ana Sayfa', show: true },
-            { path: '/scan', icon: ScanBarcode, label: 'Tara', show: true },
-            { path: '/inventory', icon: Package, label: 'Stok', show: true },
-            { path: '/alerts', icon: AlertTriangle, label: 'Uyarılar', badge: criticalCount, show: true },
-            { path: '/profile', icon: User, label: 'Profil', show: true },
-          ].filter(n => n.show).map((item) => {
-            const isActive = location.pathname === item.path;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex flex-col items-center py-2.5 px-3 flex-1 transition-colors relative ${
-                  isActive ? 'text-primary-600' : 'text-slate-400 hover:text-slate-700'
-                }`}
-              >
-                {isActive && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary-600 rounded-full" />
-                )}
-                <div className="relative">
-                  <Icon size={22} className={isActive ? 'stroke-2' : 'stroke-[1.5]'} />
-                  {item.badge > 0 && !isActive && (
-                    <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
-                      {item.badge}
+        <nav
+          className="glass border-t border-slate-200/60 shrink-0 z-20"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+        >
+          <div className="flex items-end justify-around max-w-lg mx-auto w-full px-2">
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              const Icon = item.icon;
+
+              if (item.isCTA) {
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className="flex flex-col items-center py-2 flex-1"
+                  >
+                    <div
+                      className={`relative h-13 w-13 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-200 active:scale-90 ${
+                        isActive
+                          ? 'bg-gradient-to-br from-primary-400 to-primary-600 shadow-primary-400/50 scale-105 animate-pulse-ring'
+                          : 'bg-gradient-to-br from-primary-500 to-primary-700 shadow-primary-500/40'
+                      }`}
+                      style={{ height: '52px', width: '52px' }}
+                    >
+                      <Icon size={24} className="text-white" strokeWidth={2} />
+                    </div>
+                    <span className={`text-[10px] mt-1.5 font-semibold ${isActive ? 'text-primary-600' : 'text-slate-400'}`}>
+                      {item.label}
                     </span>
+                  </Link>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="flex flex-col items-center py-2 px-1 flex-1 relative transition-all"
+                >
+                  <div className="relative">
+                    {/* Active background glow */}
+                    {isActive && (
+                      <div className="absolute inset-0 -m-2 bg-primary-50 rounded-xl" />
+                    )}
+                    <div className={`relative transition-all duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>
+                      <Icon
+                        size={22}
+                        className={`transition-colors ${isActive ? 'text-primary-600' : 'text-slate-400'}`}
+                        strokeWidth={isActive ? 2.5 : 1.8}
+                      />
+                    </div>
+
+                    {/* Badge */}
+                    {item.badge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
+                        {item.badge > 9 ? '9+' : item.badge}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Active indicator dot */}
+                  {isActive ? (
+                    <div className="h-1 w-4 bg-primary-600 rounded-full mt-1.5 shadow-sm shadow-primary-400/50" />
+                  ) : (
+                    <span className="text-[10px] mt-1.5 font-medium text-slate-400">{item.label}</span>
                   )}
-                </div>
-                <span className={`text-[10px] mt-1 ${isActive ? 'font-bold' : 'font-medium'}`}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
+                  {isActive && (
+                    <span className="text-[10px] font-bold text-primary-600 leading-none">{item.label}</span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
       )}
     </div>

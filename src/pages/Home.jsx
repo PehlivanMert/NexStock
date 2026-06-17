@@ -1,8 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ScanBarcode, ArrowRightLeft, ClipboardList, AlertTriangle,
-  UploadCloud, MapPin, Package, TrendingUp, TrendingDown,
-  ChevronRight, Layers, Activity
+  UploadCloud, MapPin, Package, TrendingUp,
+  ChevronRight, Layers, Activity, Zap, Bell
 } from 'lucide-react';
 import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 
@@ -25,7 +25,6 @@ export default function Home() {
 
   const today = new Date().toDateString();
   const todayTransfers = transferLog.filter(t => new Date(t.date).toDateString() === today);
-  const totalTransferredToday = todayTransfers.reduce((sum, t) => sum + (t.items?.length || 0), 0);
 
   // Top 4 products by quantity in active location
   const topProducts = locationInventory
@@ -40,104 +39,153 @@ export default function Home() {
 
   // Quick actions filtered by role
   const quickActions = [
-    { to: '/scan', icon: ScanBarcode, label: 'Hızlı Tara', color: 'text-blue-600 bg-blue-50', show: true },
-    { to: '/transfer', icon: ArrowRightLeft, label: 'Transfer', color: 'text-violet-600 bg-violet-50', show: perms.canTransfer },
-    { to: '/count', icon: ClipboardList, label: 'Sayım', color: 'text-emerald-600 bg-emerald-50', show: perms.canCount },
-    { to: '/admin/import', icon: UploadCloud, label: 'İçe Aktar', color: 'text-teal-600 bg-teal-50', show: perms.canImport },
-    { to: '/alerts', icon: AlertTriangle, label: 'Uyarılar', color: 'text-orange-600 bg-orange-50', show: true },
-    { to: '/admin/locations', icon: MapPin, label: 'Depolar', color: 'text-slate-600 bg-slate-100', show: perms.canManageLocations },
+    { to: '/scan', icon: ScanBarcode, label: 'Hızlı Tara', gradient: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-400/30', show: true },
+    { to: '/transfer', icon: ArrowRightLeft, label: 'Transfer', gradient: 'from-violet-500 to-violet-600', shadow: 'shadow-violet-400/30', show: perms.canTransfer },
+    { to: '/count', icon: ClipboardList, label: 'Sayım', gradient: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-400/30', show: perms.canCount },
+    { to: '/admin/import', icon: UploadCloud, label: 'İçe Aktar', gradient: 'from-teal-500 to-teal-600', shadow: 'shadow-teal-400/30', show: perms.canImport },
+    { to: '/alerts', icon: AlertTriangle, label: 'Uyarılar', gradient: 'from-orange-500 to-red-500', shadow: 'shadow-orange-400/30', show: true },
+    { to: '/admin/locations', icon: MapPin, label: 'Depolar', gradient: 'from-slate-600 to-slate-700', shadow: 'shadow-slate-400/30', show: perms.canManageLocations },
   ].filter(a => a.show);
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Günaydın' : hour < 18 ? 'İyi günler' : 'İyi akşamlar';
+  const greeting = hour < 6 ? 'İyi geceler' : hour < 12 ? 'Günaydın' : hour < 18 ? 'İyi günler' : 'İyi akşamlar';
+
+  const kpiCards = [
+    {
+      icon: Layers,
+      iconColor: 'text-blue-500',
+      bgColor: 'bg-blue-50',
+      label: 'Toplam',
+      value: totalItems.toLocaleString('tr-TR'),
+      sub: 'adet stok',
+    },
+    {
+      icon: Package,
+      iconColor: 'text-violet-500',
+      bgColor: 'bg-violet-50',
+      label: 'Çeşit',
+      value: uniqueProducts,
+      sub: 'ürün kayıtlı',
+    },
+    {
+      icon: Bell,
+      iconColor: criticalItems.length > 0 ? 'text-red-500' : 'text-emerald-500',
+      bgColor: criticalItems.length > 0 ? 'bg-red-50' : 'bg-emerald-50',
+      label: 'Kritik',
+      value: criticalItems.length,
+      sub: criticalItems.length > 0 ? 'düşük stok!' : 'sorun yok ✓',
+      onClick: () => navigate('/alerts'),
+      alert: criticalItems.length > 0,
+    },
+  ];
 
   return (
-    <div className="px-4 py-5 space-y-5 pb-28 max-w-lg mx-auto">
+    <div className="px-4 pt-4 pb-32 space-y-5 max-w-lg mx-auto">
 
       {/* ── Greeting ─────────────────────────────────── */}
-      <div>
+      <div className="animate-fade-in-up">
         <p className="text-sm text-slate-500 font-medium">{greeting},</p>
-        <h1 className="text-2xl font-bold text-slate-900 mt-0.5">{user?.name}</h1>
+        <h1 className="text-2xl font-extrabold text-slate-900 mt-0.5 tracking-tight">{user?.name}</h1>
         {activeLocation && (
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <span className="h-2 w-2 bg-emerald-400 rounded-full animate-pulse"></span>
-            <span className="text-sm text-slate-600 font-medium">{activeLocation.name}</span>
-            <span className="text-slate-300">·</span>
-            <span className="text-xs text-slate-400 capitalize">{activeLocation.type === 'warehouse' ? 'Depo' : 'Mağaza'}</span>
+          <div className="flex items-center gap-1.5 mt-2 bg-emerald-50 rounded-xl px-3 py-1.5 w-fit">
+            <span className="h-2 w-2 bg-emerald-400 rounded-full animate-pulse flex-shrink-0"></span>
+            <span className="text-sm text-emerald-700 font-semibold">{activeLocation.name}</span>
+            <span className="text-emerald-400">·</span>
+            <span className="text-xs text-emerald-600">{activeLocation.type === 'warehouse' ? 'Depo' : 'Mağaza'}</span>
           </div>
         )}
       </div>
 
-      {/* ── KPI Row ───────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-1.5 mb-2">
-            <Layers size={14} className="text-primary-500" />
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Toplam</span>
-          </div>
-          <div className="text-3xl font-bold text-slate-800 leading-none">{totalItems}</div>
-          <div className="text-[11px] text-slate-500 mt-1">adet stok</div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-1.5 mb-2">
-            <Package size={14} className="text-violet-500" />
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Ürün</span>
-          </div>
-          <div className="text-3xl font-bold text-slate-800 leading-none">{uniqueProducts}</div>
-          <div className="text-[11px] text-slate-500 mt-1">çeşit kayıtlı</div>
-        </div>
-
-        <button
-          onClick={() => navigate('/alerts')}
-          className={`rounded-2xl p-4 border shadow-sm text-left transition-colors ${
-            criticalItems.length > 0
-              ? 'bg-red-50 border-red-200'
-              : 'bg-white border-slate-100'
-          }`}
-        >
-          <div className="flex items-center gap-1.5 mb-2">
-            <AlertTriangle size={14} className={criticalItems.length > 0 ? 'text-red-500' : 'text-slate-400'} />
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Kritik</span>
-          </div>
-          <div className={`text-3xl font-bold leading-none ${criticalItems.length > 0 ? 'text-red-600' : 'text-slate-800'}`}>
-            {criticalItems.length}
-          </div>
-          <div className={`text-[11px] mt-1 ${criticalItems.length > 0 ? 'text-red-500 font-medium' : 'text-slate-500'}`}>
-            {criticalItems.length > 0 ? 'düşük stok!' : 'sorun yok ✓'}
-          </div>
-        </button>
+      {/* ── KPI Cards ─────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3 animate-fade-in-up delay-75">
+        {kpiCards.map((card, i) => {
+          const Icon = card.icon;
+          const CardEl = card.onClick ? 'button' : 'div';
+          return (
+            <CardEl
+              key={i}
+              onClick={card.onClick}
+              className={`bg-white rounded-2xl p-4 card-shadow border transition-all text-left ${
+                card.alert
+                  ? 'border-red-200 bg-red-50/50 active:scale-95'
+                  : 'border-slate-100/80 active:scale-95'
+              } ${card.onClick ? 'cursor-pointer' : ''}`}
+            >
+              <div className={`h-8 w-8 rounded-xl ${card.bgColor} flex items-center justify-center mb-2.5`}>
+                <Icon size={16} className={card.iconColor} />
+              </div>
+              <div className={`text-2xl font-black leading-none tracking-tight ${card.alert ? 'text-red-600' : 'text-slate-800'}`}>
+                {card.value}
+              </div>
+              <div className={`text-[11px] font-medium mt-1 ${card.alert ? 'text-red-500' : 'text-slate-400'}`}>
+                {card.sub}
+              </div>
+            </CardEl>
+          );
+        })}
       </div>
 
-      {/* ── Stock Distribution Bar Chart ─────────────── */}
+      {/* ── Quick Actions ─────────────────────────────── */}
+      <div className="animate-fade-in-up delay-100">
+        <h2 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+          <Zap size={14} className="text-primary-500" />
+          Hızlı İşlemler
+        </h2>
+        <div className={`grid gap-2.5 ${quickActions.length <= 3 ? 'grid-cols-3' : 'grid-cols-3'}`}>
+          {quickActions.map(({ to, icon: Icon, label, gradient, shadow }, i) => (
+            <Link
+              key={to}
+              to={to}
+              className={`touch-active bg-white p-3 rounded-2xl border border-slate-100/80 card-shadow flex flex-col items-center gap-2.5`}
+              style={{ animationDelay: `${i * 50}ms` }}
+            >
+              <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${gradient} shadow-lg ${shadow} flex items-center justify-center`}>
+                <Icon size={22} className="text-white" strokeWidth={1.8} />
+              </div>
+              <span className="text-xs font-semibold text-slate-700 text-center leading-tight">{label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Stock Distribution ───────────────────────── */}
       {topProducts.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+        <div className="bg-white rounded-2xl border border-slate-100/80 card-shadow p-4 animate-fade-in-up delay-150">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Activity size={16} className="text-primary-500" />
               <h2 className="text-sm font-bold text-slate-800">Stok Dağılımı</h2>
             </div>
-            <button onClick={() => navigate('/inventory')} className="text-xs text-primary-600 font-semibold flex items-center gap-0.5">
-              Tümü <ChevronRight size={14} />
+            <button
+              onClick={() => navigate('/inventory')}
+              className="flex items-center gap-1 text-xs text-primary-600 font-semibold bg-primary-50 px-2.5 py-1 rounded-lg hover:bg-primary-100 transition-colors"
+            >
+              Tümü <ChevronRight size={13} />
             </button>
           </div>
 
-          <div className="space-y-3">
-            {topProducts.map((item) => {
+          <div className="space-y-3.5">
+            {topProducts.map((item, i) => {
               const pct = Math.round((item.quantity / maxQty) * 100);
               const isCritical = item.quantity < 10;
               return (
-                <div key={item.id}>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-medium text-slate-700 truncate max-w-[65%]">{item.productName}</span>
+                <div key={item.id} className="animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-xs font-semibold text-slate-700 truncate max-w-[60%]">{item.productName}</span>
                     <div className="flex items-center gap-1.5">
                       <span className={`text-xs font-bold ${isCritical ? 'text-red-600' : 'text-slate-700'}`}>{item.quantity}</span>
-                      {isCritical && <span className="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">DÜŞÜK</span>}
+                      {isCritical && (
+                        <span className="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-black">DÜŞÜK</span>
+                      )}
                     </div>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${isCritical ? 'bg-red-400' : 'bg-primary-500'}`}
+                      className={`h-full rounded-full transition-all duration-700 ease-out ${
+                        isCritical
+                          ? 'bg-gradient-to-r from-red-400 to-red-500'
+                          : 'bg-gradient-to-r from-primary-400 to-primary-500'
+                      }`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -149,31 +197,36 @@ export default function Home() {
       )}
 
       {/* ── Today's Activity ─────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+      <div className="bg-white rounded-2xl border border-slate-100/80 card-shadow p-4 animate-fade-in-up delay-200">
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp size={16} className="text-emerald-500" />
           <h2 className="text-sm font-bold text-slate-800">Bugünkü Aktivite</h2>
+          {todayTransfers.length > 0 && (
+            <span className="ml-auto text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+              {todayTransfers.length} işlem
+            </span>
+          )}
         </div>
 
         {todayTransfers.length === 0 ? (
           <div className="flex items-center gap-3 py-2">
-            <div className="h-9 w-9 bg-slate-100 rounded-full flex items-center justify-center shrink-0">
-              <Activity size={16} className="text-slate-400" />
+            <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
+              <Activity size={18} className="text-slate-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-600">Bugün işlem yapılmadı</p>
+              <p className="text-sm font-semibold text-slate-600">Bugün işlem yapılmadı</p>
               <p className="text-xs text-slate-400 mt-0.5">Transfer veya sayım başlatın</p>
             </div>
           </div>
         ) : (
           <div className="space-y-2">
             {todayTransfers.slice(-3).reverse().map(t => (
-              <div key={t.id} className="flex items-center gap-3">
-                <div className="h-8 w-8 bg-violet-50 text-violet-600 rounded-full flex items-center justify-center shrink-0">
+              <div key={t.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
+                <div className="h-9 w-9 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center shrink-0">
                   <ArrowRightLeft size={15} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-700 truncate">{t.from} → {t.to}</p>
+                  <p className="text-sm font-semibold text-slate-700 truncate">{t.from} → {t.to}</p>
                   <p className="text-xs text-slate-400">{t.items?.length} ürün · {new Date(t.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </div>
@@ -186,15 +239,18 @@ export default function Home() {
       </div>
 
       {/* ── Locations Summary ────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+      <div className="bg-white rounded-2xl border border-slate-100/80 card-shadow p-4 animate-fade-in-up delay-300">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <MapPin size={16} className="text-blue-500" />
-            <h2 className="text-sm font-bold text-slate-800">Lokasyon Özeti</h2>
+            <h2 className="text-sm font-bold text-slate-800">Lokasyonlar</h2>
           </div>
           {perms.canManageLocations && (
-            <button onClick={() => navigate('/admin/locations')} className="text-xs text-primary-600 font-semibold flex items-center gap-0.5">
-              Yönet <ChevronRight size={14} />
+            <button
+              onClick={() => navigate('/admin/locations')}
+              className="flex items-center gap-1 text-xs text-primary-600 font-semibold bg-primary-50 px-2.5 py-1 rounded-lg hover:bg-primary-100 transition-colors"
+            >
+              Yönet <ChevronRight size={13} />
             </button>
           )}
         </div>
@@ -207,47 +263,37 @@ export default function Home() {
             const isActive = loc.id === user?.activeLocationId;
 
             return (
-              <div key={loc.id} className={`flex items-center justify-between p-2.5 rounded-xl border transition-colors ${isActive ? 'bg-primary-50 border-primary-200' : 'bg-slate-50 border-transparent'}`}>
+              <div
+                key={loc.id}
+                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                  isActive
+                    ? 'bg-primary-50 border-primary-200'
+                    : 'bg-slate-50 border-transparent hover:border-slate-200'
+                }`}
+              >
                 <div className="flex items-center gap-2.5">
-                  <div className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold ${isActive ? 'bg-primary-100 text-primary-700' : 'bg-white text-slate-500 border border-slate-200'}`}>
-                    {loc.name.charAt(0)}
+                  <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold ${
+                    isActive ? 'bg-primary-600 text-white shadow-md shadow-primary-400/30' : 'bg-white text-slate-600 border border-slate-200'
+                  }`}>
+                    {loc.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className={`text-sm font-semibold leading-none ${isActive ? 'text-primary-700' : 'text-slate-700'}`}>{loc.name}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{loc.type === 'warehouse' ? 'Depo' : 'Mağaza'}</p>
+                    <p className={`text-sm font-bold leading-none ${isActive ? 'text-primary-700' : 'text-slate-700'}`}>{loc.name}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 capitalize">{loc.type === 'warehouse' ? '📦 Depo' : '🏪 Mağaza'}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-right">
+                <div className="flex items-center gap-2 text-right">
                   <div>
-                    <p className="text-sm font-bold text-slate-700">{locTotal}</p>
+                    <p className="text-sm font-extrabold text-slate-700">{locTotal.toLocaleString('tr-TR')}</p>
                     <p className="text-[10px] text-slate-400">adet</p>
                   </div>
                   {locCritical > 0 && (
-                    <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-bold">{locCritical} ⚠</span>
+                    <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-1 rounded-lg font-black">{locCritical} ⚠</span>
                   )}
                 </div>
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* ── Quick Actions ─────────────────────────────── */}
-      <div>
-        <h2 className="text-sm font-bold text-slate-700 mb-3 px-0.5">Hızlı İşlemler</h2>
-        <div className="grid grid-cols-3 gap-2.5">
-          {quickActions.map(({ to, icon: Icon, label, color }) => (
-            <Link
-              key={to}
-              to={to}
-              className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform"
-            >
-              <div className={`h-11 w-11 rounded-xl ${color} flex items-center justify-center`}>
-                <Icon size={21} />
-              </div>
-              <span className="text-xs font-semibold text-slate-700 text-center leading-tight">{label}</span>
-            </Link>
-          ))}
         </div>
       </div>
     </div>
