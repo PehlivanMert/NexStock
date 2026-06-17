@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { FileText, Download, Calendar, BarChart2, X, Loader2, Plus, ChevronDown, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStore } from '../../store/useStore';
@@ -286,7 +286,37 @@ export default function Reports() {
           <CheckCircle className="text-emerald-500" size={20} />
           <h2 className="text-lg font-bold text-slate-800">Son Sayım Raporları</h2>
           {countLogs.length > 0 && (
-            <span className="ml-auto text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">{countLogs.length} rapor</span>
+            <>
+              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">{countLogs.length} rapor</span>
+              <button
+                onClick={() => {
+                  const rows = [];
+                  countLogs.forEach(log => {
+                    log.items.forEach(item => {
+                      rows.push({
+                        'Sayım ID': log.id.slice(-6),
+                        'Tarih': new Date(log.date).toLocaleDateString('tr-TR'),
+                        'Lokasyon': log.locationName,
+                        'Ürün Adı': item.name,
+                        'SKU': item.sku,
+                        'Sistem Stoku': item.expected,
+                        'Sayılan': item.counted,
+                        'Fark': item.counted - item.expected,
+                        'Durum': item.counted === item.expected ? 'Eşit' : item.counted > item.expected ? 'Fazla' : 'Eksik',
+                      });
+                    });
+                  });
+                  const ws = XLSX.utils.json_to_sheet(rows);
+                  const wb = XLSX.utils.book_new();
+                  XLSX.utils.book_append_sheet(wb, ws, 'Sayım Raporları');
+                  XLSX.writeFile(wb, `NexStock_Tum_Sayimlar_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.xlsx`);
+                  toast.success('Tüm sayımlar Excel\'e aktarıldı!');
+                }}
+                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 rounded-xl text-xs font-bold transition-colors"
+              >
+                <Download size={13} /> Tümünü İndir
+              </button>
+            </>
           )}
         </div>
 
