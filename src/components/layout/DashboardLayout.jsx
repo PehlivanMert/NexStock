@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, MapPin, Package, FileText, Settings, LogOut, Upload, ChevronDown, Shield, Menu } from 'lucide-react';
+import { LayoutDashboard, Users, MapPin, Package, FileText, LogOut, Upload, Shield, Menu, X, Zap, ChevronRight, Smartphone } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useStore, ROLE_PERMISSIONS } from '../../store/useStore';
 import { toast } from 'sonner';
@@ -10,34 +10,26 @@ export default function DashboardLayout() {
   const user = useStore(state => state.user);
   const logout = useStore(state => state.logout);
 
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Close sidebar on route change
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
 
   const perms = ROLE_PERMISSIONS[user?.role] || {};
   const roleName = { admin: 'Yönetici', manager: 'Müdür', staff: 'Personel' }[user?.role] || user?.role;
+  const roleGradient = { admin: 'from-purple-500 to-violet-600', manager: 'from-blue-500 to-blue-600', staff: 'from-emerald-500 to-emerald-600' }[user?.role] || 'from-slate-500 to-slate-600';
 
-  const allMenuItems = [
+  const menuItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true, show: true },
     { path: '/admin/inventory', icon: Package, label: 'Envanter', show: true },
     { path: '/admin/locations', icon: MapPin, label: 'Depolar', show: perms.canManageLocations },
     { path: '/admin/import', icon: Upload, label: 'Toplu Aktarım', show: perms.canImport },
     { path: '/admin/users', icon: Users, label: 'Kullanıcılar', show: perms.canManageUsers },
     { path: '/admin/reports', icon: FileText, label: 'Raporlar', show: perms.canViewReports },
-  ];
+  ].filter(m => m.show);
 
-  const menuItems = allMenuItems.filter(m => m.show);
-
-  const isActive = (item) => {
-    if (item.exact) return location.pathname === item.path;
-    return location.pathname.startsWith(item.path);
-  };
-
+  const isActive = (item) => item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
   const pageName = menuItems.find(m => isActive(m))?.label || 'Yönetim Paneli';
 
   const handleLogout = () => {
@@ -47,42 +39,59 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden relative">
-      {/* Mobile Sidebar Overlay */}
+    <div className="flex h-screen bg-slate-100 overflow-hidden">
+      {/* ── Mobile Overlay ──────────────────────────────── */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 z-20 bg-black/50 lg:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
       )}
 
-      {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 transform transition-transform duration-200 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="h-14 lg:h-16 flex items-center px-5 border-b border-slate-100">
+      {/* ── Sidebar ─────────────────────────────────────── */}
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-30 w-64 flex flex-col shrink-0
+        bg-slate-900 border-r border-white/5
+        transform transition-transform duration-300 ease-in-out
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Logo */}
+        <div className="h-16 flex items-center justify-between px-5 border-b border-white/8 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-primary-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">N</div>
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
+              <Zap size={18} className="text-white fill-white" />
+            </div>
             <div>
-              <div className="text-base font-bold text-slate-800 leading-none">NexStock</div>
-              <div className="text-[10px] text-slate-400 font-medium mt-0.5">Yönetim Paneli</div>
+              <div className="text-sm font-black text-white tracking-tight leading-none">NexStock</div>
+              <div className="text-[10px] text-slate-500 font-medium mt-0.5">Yönetim Paneli</div>
             </div>
           </div>
+          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-1.5 text-slate-500 hover:text-white rounded-lg">
+            <X size={18} />
+          </button>
         </div>
 
-        {/* User info in sidebar */}
-        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-sm shrink-0">
-              {user?.name?.charAt(0)}
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-slate-800 truncate">{user?.name}</div>
-              <div className="text-xs text-slate-500 flex items-center gap-1">
-                <Shield size={10} />
-                {roleName}
+        {/* User card */}
+        <div className="mx-3 mt-4 mb-2">
+          <div className={`bg-gradient-to-br ${roleGradient} rounded-2xl p-3.5`}>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center text-white font-black text-base shrink-0">
+                {user?.name?.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-bold text-white truncate">{user?.name}</div>
+                <div className="text-xs text-white/60 flex items-center gap-1 mt-0.5">
+                  <Shield size={10} /> {roleName}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-3">
-          <ul className="space-y-0.5 px-3">
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto py-2 px-3">
+          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-2">Menü</div>
+          <ul className="space-y-0.5">
             {menuItems.map((item) => {
               const active = isActive(item);
               const Icon = item.icon;
@@ -90,114 +99,78 @@ export default function DashboardLayout() {
                 <li key={item.path}>
                   <Link
                     to={item.path}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                      active ? 'bg-primary-50 text-primary-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
+                      active
+                        ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20'
+                        : 'text-slate-400 hover:text-white hover:bg-white/8'
                     }`}
                   >
-                    <Icon size={19} className={active ? 'stroke-2' : 'stroke-[1.5]'} />
-                    <span className="text-sm">{item.label}</span>
+                    <Icon size={18} strokeWidth={active ? 2.5 : 1.8} />
+                    <span className="text-sm font-semibold">{item.label}</span>
+                    {active && <ChevronRight size={14} className="ml-auto opacity-60" />}
                   </Link>
                 </li>
               );
             })}
           </ul>
+
+          {/* Divider */}
+          <div className="h-px bg-white/8 mx-3 my-4" />
+
+          {/* Terminal link */}
+          <Link
+            to="/"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/8 transition-all"
+          >
+            <Smartphone size={18} strokeWidth={1.8} />
+            <span className="text-sm font-semibold">Terminal'e Dön</span>
+          </Link>
         </nav>
 
-        <div className="p-3 border-t border-slate-100">
+        {/* Logout */}
+        <div className="p-3 border-t border-white/8 shrink-0">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 w-full text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors text-sm"
+            className="flex items-center gap-3 px-3 py-2.5 w-full text-slate-400 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all"
           >
-            <LogOut size={18} />
-            <span>Çıkış Yap</span>
+            <LogOut size={18} strokeWidth={1.8} />
+            <span className="text-sm font-semibold">Çıkış Yap</span>
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* ── Main Content ─────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 shrink-0">
+        {/* Header */}
+        <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-5 lg:px-7 shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
-            <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 rounded-lg text-slate-500 lg:hidden hover:bg-slate-100 active:bg-slate-200">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 -ml-1 rounded-xl text-slate-500 lg:hidden hover:bg-slate-100 transition-colors"
+            >
               <Menu size={20} />
             </button>
-            <h2 className="text-base font-semibold text-slate-800">{pageName}</h2>
+            <div>
+              <h2 className="text-base font-bold text-slate-800">{pageName}</h2>
+              <p className="text-xs text-slate-400 hidden sm:block">NexStock Yönetim Paneli</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Link to="/" className="text-xs font-medium text-primary-600 bg-primary-50 px-3 py-1.5 rounded-lg hover:bg-primary-100 transition-colors">
-              ← Terminal
-            </Link>
-
-            {/* Settings Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => { setShowSettingsMenu(v => !v); setShowUserMenu(false); }}
-                className={`p-2 rounded-lg transition-colors ${showSettingsMenu ? 'bg-slate-100 text-slate-700' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
-              >
-                <Settings size={19} />
-              </button>
-              {showSettingsMenu && (
-                <div className="absolute right-0 top-11 bg-white rounded-xl border border-slate-200 shadow-xl w-52 z-50 overflow-hidden">
-                  <div className="p-1">
-                    {[
-                      { emoji: '🔧', label: 'Sistem Ayarları', msg: 'Firebase bağlantısı sonrası aktif olacak.' },
-                      { emoji: '🔔', label: 'Bildirim Ayarları', msg: 'Bildirim ayarlarını Terminal > Profil üzerinden yönetin.' },
-                      { emoji: '🎨', label: 'Görünüm', msg: 'Tema ayarları Firebase sonrası gelecek.' },
-                    ].map(({ emoji, label, msg }) => (
-                      <button key={label} onClick={() => { toast.info(label, { description: msg }); setShowSettingsMenu(false); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-lg">
-                        {emoji} {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+            {/* User pill */}
+            <div className={`hidden sm:flex items-center gap-2 bg-gradient-to-r ${roleGradient} text-white px-3 py-1.5 rounded-xl text-xs font-bold`}>
+              <Shield size={12} />
+              {roleName}
             </div>
-
-            {/* User Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => { setShowUserMenu(v => !v); setShowSettingsMenu(false); }}
-                className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
-              >
-                <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm">
-                  {user?.name?.charAt(0)}
-                </div>
-                <span className="text-sm font-medium text-slate-700 hidden md:block">{user?.name}</span>
-                <ChevronDown size={14} className="text-slate-400" />
-              </button>
-
-              {showUserMenu && (
-                <div className="absolute right-0 top-11 bg-white rounded-xl border border-slate-200 shadow-xl w-52 z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-slate-100">
-                    <div className="font-bold text-slate-800 text-sm">{user?.name}</div>
-                    <div className="text-xs text-slate-500">{roleName} · {user?.email}</div>
-                  </div>
-                  <div className="p-1">
-                    <button onClick={() => { navigate('/profile'); setShowUserMenu(false); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium">
-                      👤 Profilim
-                    </button>
-                    <button onClick={() => { navigate('/profile'); setShowUserMenu(false); toast.info('Profil sayfasından hesap ayarlarına erişebilirsiniz.'); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium">
-                      ⚙️ Hesap Ayarları
-                    </button>
-                    <div className="border-t border-slate-100 my-1"></div>
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg font-medium">
-                      🚪 Çıkış Yap
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 font-black text-sm border border-slate-200">
+              {user?.name?.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
 
-        {(showUserMenu || showSettingsMenu) && (
-          <div className="fixed inset-0 z-40" onClick={() => { setShowUserMenu(false); setShowSettingsMenu(false); }} />
-        )}
-
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-6xl mx-auto">
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-5 lg:p-7 max-w-7xl mx-auto">
             <Outlet />
           </div>
         </main>

@@ -121,27 +121,7 @@ export default function Login() {
               </button>
             </form>
 
-            {/* ── Demo Logins ────────────────────────── */}
-            <div className="mt-6 pt-5 border-t border-white/10">
-              <p className="text-xs text-slate-500 text-center mb-3 font-medium uppercase tracking-wider">Hızlı Demo</p>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { role: 'admin', label: 'Yönetici', color: 'bg-purple-500/20 text-purple-300 border-purple-500/25 hover:bg-purple-500/30' },
-                  { role: 'manager', label: 'Müdür', color: 'bg-blue-500/20 text-blue-300 border-blue-500/25 hover:bg-blue-500/30' },
-                  { role: 'staff', label: 'Personel', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/25 hover:bg-emerald-500/30' },
-                ].map(({ role, label, color }) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => demoLogin(role)}
-                    className={`py-2.5 px-2 text-xs font-bold border rounded-xl transition-all active:scale-95 ${color}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] text-slate-600 text-center mt-2.5">Şifre: <span className="font-mono font-bold text-slate-500">1234</span></p>
-            </div>
+
           </div>
 
           {/* Clear cache link */}
