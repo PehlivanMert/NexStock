@@ -38,8 +38,11 @@ export default function Users() {
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData]       = useState(emptyForm);
   const [showPass, setShowPass]       = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null); // { user, mode: 'deactivate'|'delete'|null }
   const [saving, setSaving]           = useState(false);
+  
+  // Admin şifre doğrulama modalı için state
+  const [adminAuthModal, setAdminAuthModal] = useState({ show: false, password: '' });
 
   // ── Firestore'dan kullanıcıları yükle ────────────────────────
   const fetchUsers = useCallback(async () => {
@@ -84,101 +87,139 @@ export default function Users() {
     if (!editingUser) {
       if (!formData.password) { toast.error('Şifre zorunludur.'); return; }
       if (formData.password.length < 6) { toast.error('Şifre en az 6 karakter olmalıdır.'); return; }
+      
+      // Yeni kullanıcı eklerken, admin şifresi sormak için modal'ı aç
+      setAdminAuthModal({ show: true, password: '' });
+      return;
     }
 
     setSaving(true);
     try {
-      if (editingUser) {
-        // ── Düzenle ──
-        const updates = {
-          name: formData.name, role: formData.role,
-          location: formData.location, status: formData.status, phone: formData.phone,
-        };
-        await updateUserProfile(editingUser.uid, updates);
+      // ── Düzenle ──
+      const updates = {
+        name: formData.name, role: formData.role,
+        location: formData.location, status: formData.status, phone: formData.phone,
+      };
+      await updateUserProfile(editingUser.uid, updates);
 
-        // Local listeyi güncelle
-        setUsers(prev => prev.map(u => u.uid === editingUser.uid ? { ...u, ...updates } : u));
+      // Local listeyi güncelle
+      setUsers(prev => prev.map(u => u.uid === editingUser.uid ? { ...u, ...updates } : u));
 
+      await logActivity({
+        action: 'EDIT_USER', userId: currentUser?.uid,
+        userName: currentUser?.name, userRole: currentUser?.role,
+        details: { targetUser: formData.name, targetUid: editingUser.uid, role: formData.role },
+      });
+      toast.success('Kullanıcı güncellendi!');
+      closeForm();
+    } catch (err) {
+      toast.error('İşlem başarısız: ' + err.message);
+    }
+    setSaving(false);
+  };
+
+  // ── Yeni Kullanıcı Oluşturma (Admin Şifresi ile) ──────────────
+  const handleCreateNewUser = async (e) => {
+    e.preventDefault();
+    const adminPassword = adminAuthModal.password;
+    if (!adminPassword) { toast.error('Admin şifresi gereklidir.'); return; }
+
+    setSaving(true);
+    try {
+      const adminEmail = currentUser?.email;
+      const profileData = {
+        name: formData.name, email: formData.email, role: formData.role,
+        location: formData.location, status: formData.status, phone: formData.phone,
+        notifications: { lowStock: true, transfer: true, count: false },
+        createdAt: new Date().toISOString(),
+      };
+
+      // 1) Yeni kullanıcıyı oluştur
+      const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const newUid = cred.user.uid;
+
+      // 2) Firestore profilini kaydet
+      await setUserProfile(newUid, profileData);
+
+      // Activity log
+      try {
         await logActivity({
-          action: 'EDIT_USER', userId: currentUser?.uid,
+          action: 'ADD_USER', userId: currentUser?.uid,
           userName: currentUser?.name, userRole: currentUser?.role,
-          details: { targetUser: formData.name, targetUid: editingUser.uid, role: formData.role },
+          details: { newUser: formData.name, newEmail: formData.email, role: formData.role },
         });
-        toast.success('Kullanıcı güncellendi!');
-        closeForm();
+      } catch (_) {}
 
-      } else {
-        // ── Yeni kullanıcı ekle ──
-        // 1) Firebase Auth'ta kullanıcı oluştur (bu adım mevcut oturumu kapatır!)
-        const adminEmail    = currentUser?.email;
-        const adminPassword = prompt('Güvenlik için admin şifrenizi girin:');
-        if (!adminPassword) { setSaving(false); return; }
+      // 3) Admin'i geri al
+      await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
 
-        const profileData = {
-          name: formData.name, email: formData.email, role: formData.role,
-          location: formData.location, status: formData.status, phone: formData.phone,
-          notifications: { lowStock: true, transfer: true, count: false },
-          createdAt: new Date().toISOString(),
-        };
-
-        // Yeni kullanıcıyı oluştur
-        const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        const newUid = cred.user.uid;
-
-        // Firestore profilini kaydet
-        await setUserProfile(newUid, profileData);
-
-        // Activity log (henüz oturum değiştiği için try/catch)
-        try {
-          await logActivity({
-            action: 'ADD_USER', userId: currentUser?.uid,
-            userName: currentUser?.name, userRole: currentUser?.role,
-            details: { newUser: formData.name, newEmail: formData.email, role: formData.role },
-          });
-        } catch (_) {}
-
-        // 2) Admin'i geri al
-        await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-
-        // 3) Local listeye ekle
-        setUsers(prev => [...prev, { uid: newUid, ...profileData }]);
-
-        toast.success('Kullanıcı oluşturuldu!', { description: `${formData.name} sisteme eklendi.` });
-        closeForm();
-      }
+      // 4) Local listeye ekle ve modal'ları kapat
+      setUsers(prev => [...prev, { uid: newUid, ...profileData }]);
+      toast.success('Kullanıcı oluşturuldu!', { description: `${formData.name} sisteme eklendi.` });
+      
+      setAdminAuthModal({ show: false, password: '' });
+      closeForm();
 
     } catch (err) {
-      console.error('User save error:', err);
+      console.error('User create error:', err);
       if (err.code === 'auth/email-already-in-use') {
         toast.error('Bu e-posta adresi zaten kayıtlı.');
+        setAdminAuthModal({ show: false, password: '' });
       } else if (err.code === 'auth/weak-password') {
         toast.error('Şifre çok zayıf (min 6 karakter).');
+        setAdminAuthModal({ show: false, password: '' });
       } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        toast.error('Admin şifresi yanlış. Kullanıcı oluşturuldu ancak oturum yenilenemedi.');
-        // Yine de listeye ekle
+        toast.error('Admin şifresi yanlış. Kullanıcı oluşturuldu ancak oturum yenilenemedi. Lütfen tekrar giriş yapın.', { duration: 6000 });
+        setAdminAuthModal({ show: false, password: '' });
         fetchUsers();
       } else {
         toast.error('İşlem başarısız: ' + (err.message || 'Bilinmeyen hata'));
+        setAdminAuthModal({ show: false, password: '' });
       }
     }
     setSaving(false);
   };
 
-  // ── Sil ──────────────────────────────────────────────────────
+  // ── Erişimi kapat (Pasif yap — anlık, Auth'a dokunmaz) ───────
+  const handleDeactivate = async () => {
+    if (!confirmDelete) return;
+    setSaving(true);
+    try {
+      await updateUserProfile(confirmDelete.uid, { status: 'Pasif' });
+      setUsers(prev => prev.map(u =>
+        u.uid === confirmDelete.uid ? { ...u, status: 'Pasif' } : u
+      ));
+      await logActivity({
+        action: 'EDIT_USER', userId: currentUser?.uid,
+        userName: currentUser?.name, userRole: currentUser?.role,
+        details: { targetUser: confirmDelete.name, targetUid: confirmDelete.uid, change: 'deactivated' },
+      });
+      toast.success('Erişim kapatıldı.', {
+        description: `${confirmDelete.name} artık sisteme giremez.`,
+      });
+      setConfirmDelete(null);
+    } catch (err) {
+      toast.error('İşlem başarısız: ' + err.message);
+    }
+    setSaving(false);
+  };
+
+  // ── Kalıcı sil (sadece Firestore doc — Auth'ta kalır) ────────
   const handleDelete = async () => {
     if (!confirmDelete) return;
     setSaving(true);
     try {
       await deleteUserDoc(confirmDelete.uid);
       setUsers(prev => prev.filter(u => u.uid !== confirmDelete.uid));
-
       await logActivity({
         action: 'DELETE_USER', userId: currentUser?.uid,
         userName: currentUser?.name, userRole: currentUser?.role,
         details: { deletedUser: confirmDelete.name, deletedUid: confirmDelete.uid },
       });
-
-      toast.success('Kullanıcı silindi.', { description: confirmDelete.name });
+      toast.success('Firestore kaydı silindi.', {
+        description: 'Auth kaydını silmek için Firebase Console > Authentication bölümüne gidin.',
+        duration: 8000,
+      });
       setConfirmDelete(null);
     } catch (err) {
       toast.error('Silme başarısız: ' + err.message);
@@ -333,30 +374,117 @@ export default function Users() {
         </div>
       )}
 
-      {/* ── Silme Onayı ──────────────────────────────────── */}
+      {/* ── Silme / Pasif Onayı ──────────────────────────────────── */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center">
-            <div className="h-16 w-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Trash2 size={28} className="text-red-600" />
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="h-14 w-14 bg-red-100 rounded-2xl flex items-center justify-center shrink-0">
+                <Trash2 size={24} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-slate-800">Kullanıcıyı Sil</h3>
+                <p className="text-sm text-slate-500">
+                  <strong>{confirmDelete.name}</strong> adlı kullanıcı için işlem seçin.
+                </p>
+              </div>
             </div>
-            <h3 className="font-bold text-lg text-slate-800 mb-2">Kullanıcıyı Sil?</h3>
-            <p className="text-sm text-slate-500 mb-1">
-              <strong>{confirmDelete.name}</strong> Firestore'dan kaldırılacak.
-            </p>
-            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-5">
-              Firebase Auth kaydı konsol'dan ayrıca silinmelidir.
-            </p>
+
+            <div className="space-y-3 mb-6 mt-2">
+              <button
+                onClick={handleDeactivate}
+                disabled={saving}
+                className="w-full text-left p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors group relative overflow-hidden"
+              >
+                <div className="font-bold text-amber-800 mb-1 flex items-center gap-2">
+                  <Lock size={16} /> Sadece Erişimi Kapat (Önerilen)
+                </div>
+                <div className="text-xs text-amber-700/80">
+                  Kullanıcı "Pasif" duruma geçer ve sisteme giriş yapamaz. Verileri ve işlem geçmişi korunur.
+                </div>
+              </button>
+
+              <button
+                onClick={handleDelete}
+                disabled={saving}
+                className="w-full text-left p-4 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 transition-colors group relative overflow-hidden"
+              >
+                <div className="font-bold text-red-700 mb-1 flex items-center gap-2">
+                  <Trash2 size={16} /> Tamamen Sil
+                </div>
+                <div className="text-xs text-red-600/80">
+                  Kullanıcı Firestore'dan silinir. (Not: Firebase planı gereği Authentication kaydı konsoldan manuel silinmelidir).
+                </div>
+              </button>
+            </div>
+
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete(null)}
-                className="flex-1 py-3 border border-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-50">
-                Vazgeç
-              </button>
-              <button onClick={handleDelete} disabled={saving}
-                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 disabled:opacity-60 flex items-center justify-center">
-                {saving ? <Loader2 size={16} className="animate-spin" /> : 'Sil'}
+              <button onClick={() => setConfirmDelete(null)} disabled={saving}
+                className="w-full py-3 border border-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-colors">
+                İptal Et
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Admin Şifre Onay Modalı ──────────────────────────────── */}
+      {adminAuthModal.show && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 pt-6 pb-4 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Shield size={20} className="text-primary-500" />
+                Güvenlik Onayı
+              </h2>
+              <button 
+                onClick={() => setAdminAuthModal({ show: false, password: '' })} 
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreateNewUser} className="p-6 space-y-4">
+              <p className="text-sm text-slate-500 mb-2">
+                Yeni bir kullanıcı oluşturmak, güvenliğiniz için kendi şifrenizi tekrar doğrulamanızı gerektirir.
+              </p>
+              
+              <Field label="Mevcut Şifreniz">
+                <div className="relative">
+                  <input
+                    required 
+                    type={showPass ? 'text' : 'password'} 
+                    value={adminAuthModal.password}
+                    onChange={e => setAdminAuthModal(p => ({ ...p, password: e.target.value }))}
+                    className="w-full p-3 pr-11 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 outline-none bg-slate-50 text-sm"
+                    placeholder="Kendi giriş şifrenizi girin" 
+                    autoFocus
+                  />
+                  <button type="button" onClick={() => setShowPass(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 p-1">
+                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </Field>
+
+              <div className="flex gap-3 pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setAdminAuthModal({ show: false, password: '' })}
+                  className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 text-sm"
+                >
+                  İptal
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={saving}
+                  className="flex-1 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-bold hover:from-primary-400 hover:to-primary-500 flex items-center justify-center gap-2 text-sm disabled:opacity-60 shadow-lg shadow-primary-500/25"
+                >
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : 'Doğrula'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
