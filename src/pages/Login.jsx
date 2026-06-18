@@ -2,43 +2,58 @@ import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Zap, Eye, EyeOff, LogIn, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { getUserProfile } from '../lib/firestoreService';
 
 export default function Login() {
   const login = useStore(state => state.login);
-  const users = useStore(state => state.users);
+  const loadFromFirestore = useStore(state => state.loadFromFirestore);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    setTimeout(() => {
-      const found = users.find(u =>
-        u.email === email &&
-        (u.password === password || (!u.password && password === '1234')) &&
-        u.status === 'Aktif'
-      );
-      if (found) {
-        login(found);
-        toast.success(`Hoşgeldiniz, ${found.name}!`);
-      } else {
-        toast.error('Hatalı e-posta veya şifre.', { description: 'Lütfen bilgilerinizi kontrol edin.' });
-      }
-      setLoading(false);
-    }, 700);
-  };
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const profile = await getUserProfile(cred.user.uid);
 
-  const demoLogin = (role) => {
-    const demoUsers = {
-      admin: { email: 'ali@nexstock.com', password: '1234' },
-      manager: { email: 'ayse@nexstock.com', password: '1234' },
-      staff: { email: 'mehmet@nexstock.com', password: '1234' },
-    };
-    setEmail(demoUsers[role].email);
-    setPassword(demoUsers[role].password);
+      if (!profile) {
+        toast.error('Profil bulunamadı.', { description: 'Yöneticinizle iletişime geçin.' });
+        await auth.signOut();
+        setLoading(false);
+        return;
+      }
+
+      if (profile.status === 'Pasif') {
+        toast.error('Hesabınız pasif.', { description: 'Yöneticinizle iletişime geçin.' });
+        await auth.signOut();
+        setLoading(false);
+        return;
+      }
+
+      login({ uid: cred.user.uid, ...profile });
+      toast.success(`Hoşgeldiniz, ${profile.name}!`);
+
+      // Load app data in background (non-blocking)
+      loadFromFirestore().catch(console.error);
+
+    } catch (err) {
+      console.error('Login error:', err);
+      let msg = 'Giriş başarısız. Lütfen tekrar deneyin.';
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        msg = 'Hatalı e-posta veya şifre.';
+      } else if (err.code === 'permission-denied' || err.message?.includes('Missing or insufficient permissions')) {
+        msg = 'Veritabanı erişim hatası. Firestore kuralları güncellenmemiş.';
+      }
+      toast.error(msg, { duration: 5000 });
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -120,20 +135,8 @@ export default function Login() {
                 )}
               </button>
             </form>
-
-
           </div>
 
-          {/* Clear cache link */}
-          <div className="mt-5 text-center">
-            <button
-              type="button"
-              onClick={() => { localStorage.clear(); window.location.reload(); }}
-              className="text-[11px] text-slate-600 hover:text-slate-400 underline underline-offset-2 transition-colors"
-            >
-              Önbelleği temizle
-            </button>
-          </div>
         </div>
       </div>
     </div>

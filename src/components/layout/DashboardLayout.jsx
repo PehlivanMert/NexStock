@@ -1,8 +1,10 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, MapPin, Package, FileText, LogOut, Upload, Shield, Menu, X, Zap, ChevronRight, Smartphone } from 'lucide-react';
+import { LayoutDashboard, Users, MapPin, Package, FileText, LogOut, Upload, Shield, Menu, X, Zap, ChevronRight, Smartphone, Activity } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useStore, ROLE_PERMISSIONS } from '../../store/useStore';
 import { toast } from 'sonner';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 export default function DashboardLayout() {
   const location = useLocation();
@@ -27,12 +29,14 @@ export default function DashboardLayout() {
     { path: '/admin/import', icon: Upload, label: 'Toplu Aktarım', show: perms.canImport },
     { path: '/admin/users', icon: Users, label: 'Kullanıcılar', show: perms.canManageUsers },
     { path: '/admin/reports', icon: FileText, label: 'Raporlar', show: perms.canViewReports },
+    { path: '/admin/activity', icon: Activity, label: 'İşlem Kayıtları', show: perms.canManageUsers },
   ].filter(m => m.show);
 
   const isActive = (item) => item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
   const pageName = menuItems.find(m => isActive(m))?.label || 'Yönetim Paneli';
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await signOut(auth); } catch (_) {}
     logout();
     navigate('/login');
     toast.success('Oturum kapatıldı.');

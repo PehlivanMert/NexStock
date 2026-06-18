@@ -1,61 +1,144 @@
 import { useState } from 'react';
-import { User, LogOut, Settings, Bell, Shield, ChevronRight, Save, X, Eye, EyeOff, Check, MapPin, Lock } from 'lucide-react';
+import { User, LogOut, Settings, Bell, Shield, ChevronRight, Save, X, Eye, EyeOff, Check, MapPin, Lock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 import { useNavigate } from 'react-router-dom';
+import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { updateUserProfile } from '../lib/firestoreService';
 
 export default function Profile() {
   const user = useStore(state => state.user);
   const logout = useStore(state => state.logout);
-  const updateUser = useStore(state => state.updateUser);
+  const updateProfile = useStore(state => state.updateProfile);
   const locations = useStore(state => state.locations);
   const navigate = useNavigate();
 
   const [activeModal, setActiveModal] = useState(null);
   const [accountForm, setAccountForm] = useState({
-    name: user?.name || '', email: user?.email || '', phone: user?.phone || '',
-    activeLocationId: user?.activeLocationId || '', password: '', newPassword: ''
+    name: user?.name || '',
+    phone: user?.phone || '',
+    activeLocationId: user?.activeLocationId || '',
   });
-  const [showPass, setShowPass] = useState(false);
-  const [notifications, setNotifications] = useState(user?.notifications || { lowStock: true, transfer: true, count: false });
+  const [passwordForm, setPasswordForm] = useState({ current: '', newPass: '', confirm: '' });
+  const [showPass, setShowPass] = useState({ current: false, new: false });
+  const [notifications, setNotifications] = useState(
+    user?.notifications || { lowStock: true, transfer: true, count: false }
+  );
+  const [saving, setSaving] = useState(false);
 
   const perms = ROLE_PERMISSIONS[user?.role] || {};
+  const isAdmin = user?.role === 'admin';
   const roleName = { admin: 'Yönetici', manager: 'Müdür', staff: 'Personel' }[user?.role] || user?.role;
   const roleColor = { admin: 'from-purple-500 to-violet-600', manager: 'from-blue-500 to-blue-600', staff: 'from-emerald-500 to-emerald-600' }[user?.role] || 'from-slate-500 to-slate-600';
   const activeLocation = locations.find(l => l.id === user?.activeLocationId);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (_) {}
     logout();
     navigate('/login');
     toast.success('Oturum kapatıldı.');
   };
 
-  const handleSaveAccount = (e) => {
+  const handleSaveAccount = async (e) => {
     e.preventDefault();
-    if (accountForm.newPassword && accountForm.password !== user.password) {
-      toast.error('Mevcut şifre yanlış.');
-      return;
+    setSaving(true);
+    try {
+      const updates = {
+        name: accountForm.name,
+        phone: accountForm.phone,
+        activeLocationId: accountForm.activeLocationId,
+      };
+      await updateUserProfile(user.uid, updates);
+      updateProfile(updates);
+      toast.success('Hesap bilgileri güncellendi!');
+      setActiveModal(null);
+    } catch (err) {
+      toast.error('Güncelleme başarısız: ' + err.message);
     }
-    const updates = {
-      name: accountForm.name, email: accountForm.email,
-      phone: accountForm.phone, activeLocationId: accountForm.activeLocationId,
-    };
-    if (accountForm.newPassword) updates.password = accountForm.newPassword;
-    updateUser(user.id, updates);
-    toast.success('Hesap bilgileri güncellendi!');
-    setActiveModal(null);
+    setSaving(false);
   };
 
-  const handleSaveNotifications = () => {
-    updateUser(user.id, { notifications });
-    toast.success('Bildirim tercihleri kaydedildi!');
-    setActiveModal(null);
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPass !== passwordForm.confirm) {
+      toast.error('Yeni şifreler eşleşmiyor.');
+      return;
+    }
+    if (passwordForm.newPass.length < 6) {
+      toast.error('Şifre en az 6 karakter olmalıdır.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const currentAuthUser = auth.currentUser;
+      if (!currentAuthUser) throw new Error('Oturum bulunamadı');
+
+      // Re-authenticate first
+      const credential = EmailAuthProvider.credential(user.email, passwordForm.current);
+      await reauthenticateWithCredential(currentAuthUser, credential);
+      await updatePassword(currentAuthUser, passwordForm.newPass);
+
+      toast.success('Şifre başarıyla değiştirildi!');
+      setPasswordForm({ current: '', newPass: '', confirm: '' });
+      setActiveModal(null);
+    } catch (err) {
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        toast.error('Mevcut şifre yanlış.');
+      } else {
+        toast.error('Şifre değiştirilemedi: ' + err.message);
+      }
+    }
+    setSaving(false);
+  };
+
+  const handleSaveNotifications = async () => {
+    setSaving(true);
+    try {
+      // Request browser notification permission if enabling any notification
+      const hasEnabled = Object.values(notifications).some(v => v);
+      if (hasEnabled && 'Notification' in window && Notification.permission === 'default') {
+        const result = await Notification.requestPermission();
+        if (result === 'denied') {
+          toast.warning('Tarayıcı bildirimleri engellendi. Ayarlardan izin verin.');
+        }
+      }
+
+      await updateUserProfile(user.uid, { notifications });
+      updateProfile({ notifications });
+      toast.success('Bildirim tercihleri kaydedildi!');
+      setActiveModal(null);
+    } catch (err) {
+      toast.error('Kayıt başarısız: ' + err.message);
+    }
+    setSaving(false);
+  };
+
+  // Trigger a test notification to verify it works
+  const sendTestNotification = () => {
+    if (!('Notification' in window)) {
+      toast.error('Tarayıcınız bildirim desteklemiyor.');
+      return;
+    }
+    if (Notification.permission !== 'granted') {
+      toast.warning('Bildirim izni verilmemiş. Önce kaydedin ve izin verin.');
+      return;
+    }
+    new Notification('NexStock Test Bildirimi', {
+      body: 'Bildirimler çalışıyor!',
+      icon: '/icon-192.png',
+    });
+    toast.success('Test bildirimi gönderildi!');
   };
 
   const settingsGroups = [
     {
       items: [
         { id: 'account', icon: Settings, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', label: 'Hesap Ayarları', sub: user?.email },
+        // Password change only for admin users
+        ...(isAdmin ? [{ id: 'password', icon: Lock, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', label: 'Şifre Değiştir', sub: 'Firebase Auth şifrenizi değiştirin' }] : []),
         { id: 'notifications', icon: Bell, iconBg: 'bg-purple-50', iconColor: 'text-purple-600', label: 'Bildirim Tercihleri', sub: 'Stok ve transfer bildirimleri' },
         { id: 'permissions', icon: Shield, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', label: 'Yetkiler', sub: `${roleName} yetki seviyesi` },
       ]
@@ -67,7 +150,6 @@ export default function Profile() {
 
       {/* ── Profile Hero ────────────────────────────────── */}
       <div className={`bg-gradient-to-br ${roleColor} px-4 pt-8 pb-12 text-center relative overflow-hidden`}>
-        {/* Ambient blobs */}
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-10 -mt-10" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full -ml-10 -mb-10" />
 
@@ -143,70 +225,103 @@ export default function Profile() {
           Oturumu Kapat
         </button>
 
-        {/* Version */}
-        <p className="text-center text-xs text-slate-300 font-medium pb-2">NexStock v2.1.0</p>
+        <p className="text-center text-xs text-slate-300 font-medium pb-2">NexStock v2.2.0</p>
       </div>
 
       {/* ── Account Modal ────────────────────────────────── */}
       {activeModal === 'account' && (
         <BottomSheet title="Hesap Ayarları" onClose={() => setActiveModal(null)}>
           <form onSubmit={handleSaveAccount} className="space-y-4">
-            {[
-              { label: 'Ad Soyad', type: 'text', field: 'name', required: true },
-              { label: 'E-posta', type: 'email', field: 'email', required: true },
-              { label: 'Telefon', type: 'tel', field: 'phone', placeholder: '+90 5xx xxx xx xx' },
-            ].map(f => (
-              <FormField key={f.field} label={f.label}>
-                <input
-                  type={f.type} required={f.required} value={accountForm[f.field]}
-                  onChange={e => setAccountForm({ ...accountForm, [f.field]: e.target.value })}
-                  placeholder={f.placeholder}
-                  className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 outline-none bg-slate-50 text-sm"
-                />
-              </FormField>
-            ))}
+            <FormField label="Ad Soyad">
+              <input
+                type="text" required value={accountForm.name}
+                onChange={e => setAccountForm({ ...accountForm, name: e.target.value })}
+                className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 outline-none bg-slate-50 text-sm"
+              />
+            </FormField>
+            <FormField label="E-posta (değiştirilemez)">
+              <input
+                type="email" value={user?.email} disabled
+                className="w-full p-3.5 border border-slate-200 rounded-2xl bg-slate-100 text-slate-400 text-sm cursor-not-allowed"
+              />
+            </FormField>
+            <FormField label="Telefon">
+              <input
+                type="tel" value={accountForm.phone}
+                onChange={e => setAccountForm({ ...accountForm, phone: e.target.value })}
+                placeholder="+90 5xx xxx xx xx"
+                className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 outline-none bg-slate-50 text-sm"
+              />
+            </FormField>
             <FormField label="Aktif Lokasyon">
               <select
                 value={accountForm.activeLocationId}
                 onChange={e => setAccountForm({ ...accountForm, activeLocationId: e.target.value })}
-                className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 outline-none bg-slate-50 text-sm"
+                className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
               >
+                <option value="">Seçiniz</option>
                 {locations.filter(l => l.status === 'active').map(loc => (
                   <option key={loc.id} value={loc.id}>{loc.name}</option>
                 ))}
               </select>
             </FormField>
 
-            <div className="border-t border-slate-100 pt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Lock size={14} className="text-slate-400" />
-                <p className="text-xs text-slate-500 font-medium">Şifreyi değiştir (opsiyonel)</p>
-              </div>
-              <div className="space-y-3">
-                <div className="relative">
-                  <input
-                    type={showPass ? 'text' : 'password'} value={accountForm.password}
-                    onChange={e => setAccountForm({ ...accountForm, password: e.target.value })}
-                    placeholder="Mevcut şifre"
-                    className="w-full p-3.5 pr-12 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
-                  />
-                  <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 p-1">
-                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                <input
-                  type="password" value={accountForm.newPassword}
-                  onChange={e => setAccountForm({ ...accountForm, newPassword: e.target.value })}
-                  placeholder="Yeni şifre"
-                  className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
-                />
-              </div>
+            <div className="flex gap-3 pt-1">
+              <button type="button" onClick={() => setActiveModal(null)} className="flex-1 py-3.5 border border-slate-200 text-slate-600 rounded-2xl font-semibold text-sm">İptal</button>
+              <button type="submit" disabled={saving} className="flex-1 py-3.5 bg-primary-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20 text-sm disabled:opacity-60">
+                {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Kaydet
+              </button>
             </div>
+          </form>
+        </BottomSheet>
+      )}
+
+      {/* ── Password Modal (Admin only) ───────────────────── */}
+      {activeModal === 'password' && isAdmin && (
+        <BottomSheet title="Şifre Değiştir" onClose={() => setActiveModal(null)}>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <FormField label="Mevcut Şifre">
+              <div className="relative">
+                <input
+                  type={showPass.current ? 'text' : 'password'}
+                  required value={passwordForm.current}
+                  onChange={e => setPasswordForm({ ...passwordForm, current: e.target.value })}
+                  placeholder="Mevcut şifreniz"
+                  className="w-full p-3.5 pr-12 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
+                />
+                <button type="button" onClick={() => setShowPass(s => ({ ...s, current: !s.current }))} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 p-1">
+                  {showPass.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </FormField>
+            <FormField label="Yeni Şifre">
+              <div className="relative">
+                <input
+                  type={showPass.new ? 'text' : 'password'}
+                  required value={passwordForm.newPass}
+                  onChange={e => setPasswordForm({ ...passwordForm, newPass: e.target.value })}
+                  placeholder="En az 6 karakter"
+                  minLength={6}
+                  className="w-full p-3.5 pr-12 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
+                />
+                <button type="button" onClick={() => setShowPass(s => ({ ...s, new: !s.new }))} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 p-1">
+                  {showPass.new ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </FormField>
+            <FormField label="Yeni Şifre (tekrar)">
+              <input
+                type="password" required value={passwordForm.confirm}
+                onChange={e => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
+                placeholder="Şifreyi doğrulayın"
+                className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
+              />
+            </FormField>
 
             <div className="flex gap-3 pt-1">
               <button type="button" onClick={() => setActiveModal(null)} className="flex-1 py-3.5 border border-slate-200 text-slate-600 rounded-2xl font-semibold text-sm">İptal</button>
-              <button type="submit" className="flex-1 py-3.5 bg-primary-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20 text-sm">
-                <Save size={15} /> Kaydet
+              <button type="submit" disabled={saving} className="flex-1 py-3.5 bg-orange-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 text-sm disabled:opacity-60">
+                {saving ? <Loader2 size={15} className="animate-spin" /> : <Lock size={15} />} Değiştir
               </button>
             </div>
           </form>
@@ -216,6 +331,27 @@ export default function Profile() {
       {/* ── Notifications Modal ────────────────────────── */}
       {activeModal === 'notifications' && (
         <BottomSheet title="Bildirim Tercihleri" onClose={() => setActiveModal(null)}>
+          {/* Browser permission status */}
+          {'Notification' in window && (
+            <div className={`mb-4 p-3 rounded-2xl text-xs font-medium flex items-center gap-2 ${
+              Notification.permission === 'granted'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : Notification.permission === 'denied'
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-amber-50 text-amber-700 border border-amber-200'
+            }`}>
+              <Bell size={14} />
+              Tarayıcı bildirimleri:{' '}
+              <strong>
+                {Notification.permission === 'granted' ? 'İzin Verildi' :
+                 Notification.permission === 'denied' ? 'Engellendi' : 'Beklemede'}
+              </strong>
+              {Notification.permission !== 'denied' && (
+                <button onClick={sendTestNotification} className="ml-auto underline">Test Et</button>
+              )}
+            </div>
+          )}
+
           <div className="space-y-3">
             {[
               { key: 'lowStock', label: 'Kritik Stok Uyarıları', desc: 'Stok eşiğin altına düştüğünde' },
@@ -236,8 +372,12 @@ export default function Profile() {
               </div>
             ))}
           </div>
-          <button onClick={handleSaveNotifications} className="w-full mt-4 py-3.5 bg-primary-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20">
-            <Check size={17} /> Kaydet
+          <button
+            onClick={handleSaveNotifications}
+            disabled={saving}
+            className="w-full mt-4 py-3.5 bg-primary-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20 disabled:opacity-60"
+          >
+            {saving ? <Loader2 size={17} className="animate-spin" /> : <Check size={17} />} Kaydet
           </button>
         </BottomSheet>
       )}
@@ -276,7 +416,6 @@ export default function Profile() {
   );
 }
 
-// Reusable bottom sheet component
 function BottomSheet({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm animate-fade-in">

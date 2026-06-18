@@ -11,6 +11,7 @@ export default function AddProduct() {
   const locations = useStore(state => state.locations);
   const addProduct = useStore(state => state.addProduct);
   const [isScanning, setIsScanning] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '', sku: '', barcode: location.state?.barcode || '',
     quantity: '', locationId: '', shelf: ''
@@ -18,17 +19,23 @@ export default function AddProduct() {
 
   const update = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.locationId) { toast.error('Lütfen bir lokasyon seçin.'); return; }
-    addProduct(
-      { name: formData.name, sku: formData.sku, barcode: formData.barcode },
-      formData.locationId,
-      parseInt(formData.quantity) || 0,
-      formData.shelf
-    );
-    toast.success('Ürün başarıyla eklendi!');
-    navigate(-1);
+    setSaving(true);
+    try {
+      await addProduct(
+        { name: formData.name, sku: formData.sku, barcode: formData.barcode },
+        formData.locationId,
+        parseInt(formData.quantity) || 0,
+        formData.shelf
+      );
+      toast.success('Ürün başarıyla eklendi!');
+      navigate(-1);
+    } catch (err) {
+      toast.error('Kayıt başarısız: ' + err.message);
+    }
+    setSaving(false);
   };
 
   if (isScanning) {
@@ -141,10 +148,11 @@ export default function AddProduct() {
           {/* Submit */}
           <button
             type="submit"
-            className="w-full py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-2xl font-bold shadow-lg shadow-primary-500/30 flex justify-center items-center gap-2.5 active:scale-98 transition-all"
+            disabled={saving}
+            className="w-full py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-2xl font-bold shadow-lg shadow-primary-500/30 flex justify-center items-center gap-2.5 active:scale-98 transition-all disabled:opacity-60"
           >
-            <Plus size={20} />
-            Ürünü Kaydet
+            {saving ? <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus size={20} />}
+            {saving ? 'Kaydediliyor...' : 'Ürünü Kaydet'}
           </button>
         </form>
       </div>

@@ -1,19 +1,18 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { getStorage } from 'firebase/storage';
 
-// Replace with actual Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDummyKey-xxxxxxxxxxxxxxxx",
-  authDomain: "envanter-app.firebaseapp.com",
-  projectId: "envanter-app",
-  storageBucket: "envanter-app.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:xxxxxxxxxxxxxxx"
+  apiKey: "AIzaSyCTBoB3PsPsikcZJCijmZI23J_kiSCLqhY",
+  authDomain: "nexstock-9353e.firebaseapp.com",
+  projectId: "nexstock-9353e",
+  storageBucket: "nexstock-9353e.firebasestorage.app",
+  messagingSenderId: "638318795536",
+  appId: "1:638318795536:web:8650d6399987fd3772e395",
+  measurementId: "G-69C4YW4N78"
 };
 
-const app = initializeApp(firebaseConfig);
+// Prevent duplicate app initialization during HMR
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 export const db = getFirestore(app);
 export const auth = getAuth(app);
-export const storage = getStorage(app);

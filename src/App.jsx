@@ -19,7 +19,10 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminInventory from './pages/admin/AdminInventory';
 import Users from './pages/admin/Users';
 import Reports from './pages/admin/Reports';
+import ActivityLog from './pages/admin/ActivityLog';
 import { ROLE_PERMISSIONS } from './store/useStore';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 // Protected route wrapper
 function ProtectedRoute({ children, permission }) {
@@ -38,8 +41,17 @@ function ProtectedRoute({ children, permission }) {
 
 function App() {
   const isLoggedIn = useStore(state => state.isLoggedIn);
+  const logout = useStore(state => state.logout);
 
   useEffect(() => {
+    // Firebase Auth state listener - if user signs out from another tab or token expires
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser && isLoggedIn) {
+        // Firebase session ended externally
+        logout();
+      }
+    });
+
     // Request notification permissions on load if not already granted/denied
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -48,10 +60,10 @@ function App() {
     if (navigator.storage && navigator.storage.persist) {
       navigator.storage.persist().then(granted => {
         if (granted) console.log("Storage will not be cleared except by explicit user action");
-        else console.log("Storage may be cleared by the UA under storage pressure.");
       });
     }
-  }, []);
+    return () => unsubscribe();
+  }, [isLoggedIn, logout]);
 
   return (
     <BrowserRouter>
@@ -83,6 +95,7 @@ function App() {
           <Route path="users" element={<ProtectedRoute permission="canManageUsers"><Users /></ProtectedRoute>} />
           <Route path="reports" element={<ProtectedRoute permission="canViewReports"><Reports /></ProtectedRoute>} />
           <Route path="import" element={<ProtectedRoute permission="canImport"><BulkImport /></ProtectedRoute>} />
+          <Route path="activity" element={<ProtectedRoute permission="canManageUsers"><ActivityLog /></ProtectedRoute>} />
         </Route>
 
         {/* Fallback */}
