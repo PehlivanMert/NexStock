@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { useStore } from '../../store/useStore';
-import { X, CheckCircle2, AlertTriangle, Flashlight, FlashlightOff } from 'lucide-react';
+import { X, CheckCircle2, AlertTriangle, Zap, ZapOff } from 'lucide-react';
 
 export default function BarcodeScanner({ onScan, onClose }) {
   const setScanning = useStore((state) => state.setScanning);
   const [scanState, setScanState] = useState('scanning'); // scanning | success | error
   const [lastScanned, setLastScanned] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(null); // null = unknown, false = unsupported
   const [scanCount, setScanCount] = useState(0);
   const lastScanTime = useRef(0);
+  const streamRef = useRef(null);
 
   const playBeep = () => {
     try {
@@ -33,10 +35,59 @@ export default function BarcodeScanner({ onScan, onClose }) {
     return () => setScanning(false);
   }, [setScanning]);
 
+  // ── Torch control via MediaStreamTrack.applyConstraints ──────────────────
+  const applyTorch = useCallback(async (enabled) => {
+    try {
+      // Find the active video stream from any video element on the page
+      const videoEl = document.querySelector('video');
+      if (!videoEl || !videoEl.srcObject) {
+        // Fall back to enumerating streams
+        const stream = streamRef.current;
+        if (!stream) return;
+        const track = stream.getVideoTracks()[0];
+        if (!track) return;
+        const caps = track.getCapabilities?.();
+        if (!caps?.torch) { setTorchSupported(false); return; }
+        await track.applyConstraints({ advanced: [{ torch: enabled }] });
+        setTorchSupported(true);
+        return;
+      }
+
+      const stream = videoEl.srcObject;
+      streamRef.current = stream;
+      const track = stream.getVideoTracks()[0];
+      if (!track) return;
+
+      const caps = track.getCapabilities?.();
+      if (!caps?.torch) {
+        setTorchSupported(false);
+        return;
+      }
+
+      await track.applyConstraints({ advanced: [{ torch: enabled }] });
+      setTorchSupported(true);
+    } catch (err) {
+      console.warn('Torch error:', err);
+      setTorchSupported(false);
+    }
+  }, []);
+
+  const toggleTorch = useCallback(async () => {
+    const newValue = !torchOn;
+    setTorchOn(newValue);
+    await applyTorch(newValue);
+  }, [torchOn, applyTorch]);
+
+  // Turn off torch when component unmounts
+  useEffect(() => {
+    return () => {
+      if (torchOn) applyTorch(false);
+    };
+  }, [torchOn, applyTorch]);
+
   const handleScan = (detectedCodes) => {
     if (!detectedCodes || detectedCodes.length === 0) return;
 
-    // Debounce: ignore re-scans within 1.5s of same barcode
     const now = Date.now();
     if (now - lastScanTime.current < 800) return;
     lastScanTime.current = now;
@@ -57,13 +108,22 @@ export default function BarcodeScanner({ onScan, onClose }) {
     }, 1000);
   };
 
-  // Camera constraints - safe approach without zoom (not universally supported)
-  const constraints = {
-    facingMode: { ideal: 'environment' },
-    width: { ideal: 1920 },
-    height: { ideal: 1080 },
-    ...(torchOn ? { torch: true } : {}),
-  };
+  // Capture the stream reference when the video element is added to the DOM
+  const handleVideoRef = useCallback(() => {
+    setTimeout(() => {
+      const videoEl = document.querySelector('video');
+      if (videoEl?.srcObject) {
+        streamRef.current = videoEl.srcObject;
+        const track = videoEl.srcObject.getVideoTracks()[0];
+        const caps = track?.getCapabilities?.();
+        setTorchSupported(!!caps?.torch);
+      }
+    }, 1500); // wait for camera to initialize
+  }, []);
+
+  useEffect(() => {
+    handleVideoRef();
+  }, [handleVideoRef]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
@@ -85,18 +145,20 @@ export default function BarcodeScanner({ onScan, onClose }) {
           {scanState === 'success' ? '✓ Barkod Okundu' : 'Barkodu Çerçeveleyın'}
         </div>
 
+        {/* Torch button — hidden only if definitively unsupported */}
         <button
-          onClick={() => setTorchOn(v => !v)}
+          onClick={toggleTorch}
+          disabled={torchSupported === false}
           className={`p-2.5 rounded-2xl border backdrop-blur-sm text-white active:scale-90 transition-all ${
-            torchOn
+            torchSupported === false
+              ? 'bg-black/30 border-white/5 opacity-30 cursor-not-allowed'
+              : torchOn
               ? 'bg-yellow-400/30 border-yellow-400/40 text-yellow-300'
               : 'bg-black/60 border-white/10'
           }`}
+          title={torchSupported === false ? 'Flaş desteklenmiyor' : torchOn ? 'Flaşı Kapat' : 'Flaşı Aç'}
         >
-          {torchOn
-            ? <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6l-6 6-6-6"/><path d="M12 12v6"/><path d="M12 22v-4"/></svg>
-            : <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6l-6 6-6-6"/><path d="M12 12v6"/><path d="M12 22v-4"/></svg>
-          }
+          {torchOn ? <Zap size={22} fill="currentColor" /> : <ZapOff size={22} />}
         </button>
       </div>
 
@@ -119,7 +181,11 @@ export default function BarcodeScanner({ onScan, onClose }) {
             'itf',
             'data_matrix',
           ]}
-          constraints={{ facingMode: 'environment' }}
+          constraints={{
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          }}
           allowMultiple={true}
           scanDelay={600}
           styles={{
@@ -178,6 +244,14 @@ export default function BarcodeScanner({ onScan, onClose }) {
             )}
           </div>
         </div>
+
+        {/* Torch active indicator glow */}
+        {torchOn && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ boxShadow: 'inset 0 0 60px rgba(251, 191, 36, 0.15)' }}
+          />
+        )}
       </div>
 
       {/* ── Bottom Panel ────────────────────────────────── */}
@@ -218,8 +292,12 @@ export default function BarcodeScanner({ onScan, onClose }) {
                 ))}
               </div>
             </div>
-            {/* Pulsing indicator */}
             <div className="flex items-center gap-2">
+              {torchOn && (
+                <span className="text-[10px] text-yellow-400 font-bold bg-yellow-400/10 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <Zap size={10} fill="currentColor" /> FLAŞ
+                </span>
+              )}
               <div className="h-2 w-2 bg-primary-400 rounded-full animate-pulse" />
               <span className="text-xs text-slate-500">Taranıyor</span>
             </div>

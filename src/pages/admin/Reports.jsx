@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Download, Calendar, BarChart2, X, Loader2, Plus, ChevronDown, CheckCircle } from 'lucide-react';
+import { FileText, Download, Calendar, BarChart2, X, Loader2, Plus, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStore } from '../../store/useStore';
 import * as XLSX from 'xlsx';
@@ -283,7 +283,7 @@ export default function Reports() {
       {/* ── Count Logs ─────────────────────────────────────── */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <CheckCircle className="text-emerald-500" size={20} />
+          <CheckCircle2 className="text-emerald-500" size={20} />
           <h2 className="text-lg font-bold text-slate-800">Son Sayım Raporları</h2>
           {countLogs.length > 0 && (
             <>
