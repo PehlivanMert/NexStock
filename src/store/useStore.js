@@ -133,6 +133,7 @@ export const useStore = create(
 
       // ─── LOCATIONS ───────────────────────────────────────────
       addLocation: async (location) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
         const newLoc = { id: `loc-${Date.now()}`, ...location };
         const locations = [...get().locations, newLoc];
         set({ locations });
@@ -141,6 +142,7 @@ export const useStore = create(
         await logActivity({ action: 'ADD_LOCATION', userId: u?.uid, userName: u?.name, userRole: u?.role, details: { locationName: newLoc.name } });
       },
       updateLocation: async (id, updates) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
         const locations = get().locations.map(l => l.id === id ? { ...l, ...updates } : l);
         set({ locations });
         await saveLocations(locations);
@@ -148,6 +150,7 @@ export const useStore = create(
         await logActivity({ action: 'EDIT_LOCATION', userId: u?.uid, userName: u?.name, userRole: u?.role, details: { locationId: id, updates } });
       },
       deleteLocation: async (id) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
         const locations = get().locations.filter(l => l.id !== id);
         const inventory = get().inventory.filter(i => i.locationId !== id);
         set({ locations, inventory });
@@ -158,6 +161,7 @@ export const useStore = create(
 
       // ─── PRODUCTS ────────────────────────────────────────────
       addProduct: async (product, locationId, quantity, shelf) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
         const newProductId = `p-${Date.now()}`;
         const newInvItem = {
           id: `inv-${Date.now()}`,
@@ -175,6 +179,7 @@ export const useStore = create(
       },
 
       deleteProduct: async (invId) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
         const item = get().inventory.find(i => i.id === invId);
         const product = item ? get().products.find(p => p.id === item.productId) : null;
         const inventory = get().inventory.filter(i => i.id !== invId);
@@ -186,6 +191,7 @@ export const useStore = create(
 
       // ─── INVENTORY ───────────────────────────────────────────
       updateInventoryCount: async (locationId, productId, newCount) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
         let inventory = [...get().inventory];
         const exists = inventory.find(inv => inv.locationId === locationId && inv.productId === productId);
         if (exists) {
@@ -207,6 +213,7 @@ export const useStore = create(
       },
 
       updateInventoryItem: async (id, updates) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
         const item = get().inventory.find(i => i.id === id);
         const product = item ? get().products.find(p => p.id === item.productId) : null;
         const inventory = get().inventory.map(inv => inv.id === id ? { ...inv, ...updates } : inv);
@@ -250,6 +257,7 @@ export const useStore = create(
 
       // ─── TRANSFER ────────────────────────────────────────────
       performTransfer: async (sourceLocId, destLocId, selectedProducts) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
         const state = get();
         let inventory = [...state.inventory];
 
@@ -318,6 +326,7 @@ export const useStore = create(
 
       // ─── BULK IMPORT ─────────────────────────────────────────
       bulkImportProducts: async (productsArray, locationId) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
         const state = get();
         const newProducts = [];
         const newInventory = [];

@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ScanBarcode, Package, User, Bell, ArrowLeft, Zap } from 'lucide-react';
+import { Home, ScanBarcode, Package, User, Bell, ArrowLeft, Zap, Loader2 } from 'lucide-react';
 import { useStore, ROLE_PERMISSIONS } from '../../store/useStore';
 
 export default function TerminalLayout() {
@@ -8,6 +8,7 @@ export default function TerminalLayout() {
   const isScanning = useStore((state) => state.isScanning);
   const user = useStore(state => state.user);
   const inventory = useStore(state => state.inventory);
+  const dataLoaded = useStore(state => state.dataLoaded);
 
   const perms = ROLE_PERMISSIONS[user?.role] || {};
   const isHome = location.pathname === '/';
@@ -36,6 +37,15 @@ export default function TerminalLayout() {
     { path: '/alerts', icon: Bell, label: 'Uyarılar', badge: criticalCount, show: true },
     { path: '/profile', icon: User, label: 'Profil', show: true },
   ].filter(n => n.show);
+
+  if (!dataLoaded) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen w-full bg-slate-50">
+        <Loader2 size={32} className="animate-spin text-primary-500 mb-4" />
+        <p className="text-slate-500 text-sm font-medium animate-pulse">Veriler yükleniyor...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col bg-slate-50 h-full w-full overflow-hidden">

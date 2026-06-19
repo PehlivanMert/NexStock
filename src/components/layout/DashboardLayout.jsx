@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, MapPin, Package, FileText, LogOut, Upload, Shield, Menu, X, Zap, ChevronRight, Smartphone, Activity } from 'lucide-react';
+import { LayoutDashboard, Users, MapPin, Package, FileText, LogOut, Upload, Shield, Menu, X, Zap, ChevronRight, Smartphone, Activity, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useStore, ROLE_PERMISSIONS } from '../../store/useStore';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const user = useStore(state => state.user);
   const logout = useStore(state => state.logout);
+  const dataLoaded = useStore(state => state.dataLoaded);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -41,6 +42,15 @@ export default function DashboardLayout() {
     navigate('/login');
     toast.success('Oturum kapatıldı.');
   };
+
+  if (!dataLoaded) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen w-full bg-slate-100">
+        <Loader2 size={40} className="animate-spin text-primary-600 mb-5" />
+        <p className="text-slate-500 font-semibold animate-pulse">Sistem verileri yükleniyor...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">

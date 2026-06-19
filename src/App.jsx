@@ -42,6 +42,8 @@ function ProtectedRoute({ children, permission }) {
 function App() {
   const isLoggedIn = useStore(state => state.isLoggedIn);
   const logout = useStore(state => state.logout);
+  const dataLoaded = useStore(state => state.dataLoaded);
+  const loadFromFirestore = useStore(state => state.loadFromFirestore);
 
   useEffect(() => {
     // Firebase Auth state listener - if user signs out from another tab or token expires
@@ -49,8 +51,16 @@ function App() {
       if (!firebaseUser && isLoggedIn) {
         // Firebase session ended externally
         logout();
+      } else if (firebaseUser && isLoggedIn && !dataLoaded) {
+        // Hydrate data if app is reloaded and user is already logged in
+        loadFromFirestore().catch(console.error);
       }
     });
+
+    // Hydrate immediately if auth state is already known but data is missing
+    if (isLoggedIn && !dataLoaded && auth.currentUser) {
+      loadFromFirestore().catch(console.error);
+    }
 
     // Request notification permissions on load if not already granted/denied
     if ('Notification' in window && Notification.permission === 'default') {
@@ -63,7 +73,7 @@ function App() {
       });
     }
     return () => unsubscribe();
-  }, [isLoggedIn, logout]);
+  }, [isLoggedIn, logout, dataLoaded, loadFromFirestore]);
 
   return (
     <BrowserRouter>
