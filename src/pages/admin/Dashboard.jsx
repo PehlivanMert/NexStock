@@ -161,7 +161,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
               <AreaChart data={last7Days} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
                 <defs>
                   <linearGradient id="transferGrad" x1="0" y1="0" x2="0" y2="1">
@@ -198,7 +198,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
               <BarChart data={locationData} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
                 <CartesianGrid stroke="#f1f5f9" strokeDasharray="4 4" vertical={false} />
                 <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />

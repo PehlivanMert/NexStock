@@ -31,7 +31,9 @@ export default function Profile() {
   const isAdmin = user?.role === 'admin';
   const roleName = { admin: 'Yönetici', manager: 'Müdür', staff: 'Personel' }[user?.role] || user?.role;
   const roleColor = { admin: 'from-purple-500 to-violet-600', manager: 'from-blue-500 to-blue-600', staff: 'from-emerald-500 to-emerald-600' }[user?.role] || 'from-slate-500 to-slate-600';
-  const activeLocation = locations.find(l => l.id === user?.activeLocationId);
+  const activeLocation = user?.activeLocationId === 'all'
+    ? { name: 'Tüm Lokasyonlar', type: 'all' }
+    : locations.find(l => l.id === user?.activeLocationId);
 
   const handleLogout = async () => {
     try {
@@ -260,6 +262,7 @@ export default function Profile() {
                 className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
               >
                 <option value="">Seçiniz</option>
+                <option value="all">Tüm Lokasyonlar</option>
                 {locations.filter(l => l.status === 'active').map(loc => (
                   <option key={loc.id} value={loc.id}>{loc.name}</option>
                 ))}

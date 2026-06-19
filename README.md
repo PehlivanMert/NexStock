@@ -2,16 +2,17 @@
 
 NexStock, mağazalar ve depolar arası envanter/stok takibini sağlamak amacıyla geliştirilmiş, "offline-first" (çevrimdışı çalışabilen) modern bir PWA (Progressive Web App) projesidir. Sistem, masaüstünde kapsamlı bir "Yönetim Paneli", mobil cihazlarda ise "El Terminali" hissiyatıyla çalışacak şekilde tasarlanmıştır.
 
-## 🚀 Sürüm Durumu: Production-Ready (v1.2.0)
+## 🚀 Sürüm Durumu: Production-Ready (v1.1.0)
 
-Bu sürüm ile birlikte uygulama PWA tarafında tam mobil uyumluluk, yüksek hızlı kamera optimizasyonları ve kusursuz sayım mantığı ile güncellenmiştir.
+Bu sürüm ile birlikte uygulama kullanıcı deneyimi ve arayüz tutarlılığı açısından büyük iyileştirmeler aldı. Özellikle iOS cihazlardaki tasarım problemleri giderildi, tablo ve liste bazlı veri yönetimleri daha fonksiyonel hale getirildi.
 
-### ✨ Temel Özellikler
-- **Yeni Nesil Barkod Okuyucu (WebAssembly & ZXing):** Eski tarayıcı motoru tamamen kaldırılarak yerine `@yudiel/react-qr-scanner` entegre edildi. WebAssembly tabanlı bu yeni motor sayesinde her türlü ışık, bulanıklık ve açıda inanılmaz hızlı ve kararlı barkod okuma sağlanır.
-- **Kesintisiz Sayım Modülü & Raporlama:** Depo sayımlarında kamerayı her okutmada **kapatmaz**, kesintisiz (+1) sayıma devam edebilirsiniz. Sayım esnasında ana stoku bozmaz; sayım tamamlanıp "Kaydet" denildiğinde ise sistem stoku ile sayılan stok arasındaki farkları net şekilde göstererek günceller.
-- **Responsive Yönetim Paneli (PWA Admin Layout):** Yönetim (Admin) paneli artık PWA mobil görünümüne %100 uyumludur. Yan menü (sidebar) mobil ekranlarda akıllıca gizlenerek "Hamburger Menu" yapısına geçirilmiş, ekran ferahlatılmıştır.
-- **PWA Otomatik Güncelleme:** `vite-plugin-pwa` ile arka planda sessizce (autoUpdate ve immediate) güncellenir. Kullanıcı hiçbir şey yapmadan hep en güncel sürümü kullanır.
-- **iOS Kusursuz Uyumluluk:** PWA ikonlarının iOS cihazlarda (iPhone) etrafında beyaz çerçeve çıkması problemi Apple'a özel `<link rel="apple-touch-icon">` etiketleri kullanılarak ve ikon alt yapısı şeffaflıktan arındırılarak engellenmiştir.
+### ✨ Yeni Eklenen Özellikler
+- **Detaylı İşlem Kayıtları ve Modallar:** İşlem kayıtlarındaki transfer logları tek satır özet yerine, tıklanabilir detaylı bir modal penceresiyle ürün dökümü olarak sunuldu.
+- **Toplu Düzenleme ve Seçim Modu (Multi-Select):** PWA üzerinden uzun basılı tutarak veya seçim moduyla birden fazla ürün seçilebilir, raflar ve lokasyonlar **toplu olarak** aktarılabilir.
+- **Gelişmiş Raporlar:** Haftalık stok hareketlerinde kalem bazlı detaylandırılmış veri görünümü sağlandı, personel performansına sayım istatistikleri entegre edildi.
+- **Yönetilebilir Uyarılar:** Kritik stok bildirimleri gibi sistem uyarıları artık kullanıcı tarafından silinebilir/gizlenebilir yapıya kavuşturuldu.
+- **iOS SafeArea ve PWA Layout Optimizasyonu:** iOS cihazlardaki ekranın alt bölümünde içeriklerin kesilmesi problemi, `TerminalLayout` ve CSS güncellemeleriyle tamamen düzeltildi.
+- **Gelişmiş Filtre ve Sıralama:** Envanter ekranına depo bazlı, rafa göre ve stok seviyesine göre gelişmiş çoklu filtreleme ile sıralama algoritması eklendi.
 
 ---
 

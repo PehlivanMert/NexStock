@@ -96,19 +96,33 @@ export const useStore = create(
       // Load all data from Firestore (called once after login)
       loadFromFirestore: async () => {
         try {
-          const [appData, transfers, counts, users] = await Promise.all([
-            loadAppData(),
-            loadTransferLog(100),
-            loadCountLogs(50),
-            loadAllUsers(),
-          ]);
+          const appDataResult = await loadAppData().catch(err => {
+            console.error('Failed to load appData:', err);
+            return { products: [], inventory: [], locations: [] };
+          });
+
+          const transfersResult = await loadTransferLog(100).catch(err => {
+            console.error('Failed to load transfer logs:', err);
+            return [];
+          });
+
+          const countsResult = await loadCountLogs(50).catch(err => {
+            console.error('Failed to load count logs:', err);
+            return [];
+          });
+
+          const usersResult = await loadAllUsers().catch(err => {
+            console.error('Failed to load users:', err);
+            return [];
+          });
+
           set({
-            products: appData.products,
-            inventory: appData.inventory,
-            locations: appData.locations,
-            transferLog: transfers,
-            countLogs: counts,
-            users: users,
+            products: appDataResult.products || [],
+            inventory: appDataResult.inventory || [],
+            locations: appDataResult.locations || [],
+            transferLog: transfersResult || [],
+            countLogs: countsResult || [],
+            users: usersResult || [],
             dataLoaded: true,
           });
         } catch (e) {
@@ -220,7 +234,18 @@ export const useStore = create(
         set((s) => ({ countLogs: [...s.countLogs, { id: `count-${Date.now()}`, ...newLog }] }));
         await addCountLog(newLog);
         const u = state.user;
-        await logActivity({ action: 'COUNT', userId: u?.uid, userName: u?.name, userRole: u?.role, details: { locationName: locName, totalItems, discrepancies } });
+        await logActivity({
+          action: 'COUNT',
+          userId: u?.uid,
+          userName: u?.name,
+          userRole: u?.role,
+          details: {
+            locationName: locName,
+            totalItems,
+            discrepancies,
+            items: countData.map(c => ({ name: c.name || '-', expected: c.expected || 0, counted: c.counted || 0 }))
+          }
+        });
       },
 
       // ─── TRANSFER ────────────────────────────────────────────
@@ -272,7 +297,23 @@ export const useStore = create(
         ]);
 
         const u = state.user;
-        await logActivity({ action: 'TRANSFER', userId: u?.uid, userName: u?.name, userRole: u?.role, details: { from: srcLoc, to: dstLoc, itemCount: selectedProducts.length } });
+        await logActivity({
+          action: 'TRANSFER',
+          userId: u?.uid,
+          userName: u?.name,
+          userRole: u?.role,
+          details: {
+            from: srcLoc,
+            to: dstLoc,
+            itemCount: selectedProducts.length,
+            productNames: selectedProducts.map(p => `${p.name || p.productName} (${p.transferQty || p.quantity} adet)`).join(', '),
+            items: selectedProducts.map(p => ({
+              name: p.name || p.productName || '-',
+              barcode: p.barcode || p.sku || '-',
+              quantity: p.transferQty || p.quantity || 0
+            }))
+          }
+        });
       },
 
       // ─── BULK IMPORT ─────────────────────────────────────────
@@ -296,7 +337,21 @@ export const useStore = create(
         set({ products, inventory });
         await Promise.all([saveProducts(products), saveInventory(inventory)]);
         const u = state.user;
-        await logActivity({ action: 'BULK_IMPORT', userId: u?.uid, userName: u?.name, userRole: u?.role, details: { count: productsArray.length, locationId } });
+        await logActivity({
+          action: 'BULK_IMPORT',
+          userId: u?.uid,
+          userName: u?.name,
+          userRole: u?.role,
+          details: {
+            count: productsArray.length,
+            locationId,
+            items: productsArray.map(p => ({
+              name: p.name || 'İsimsiz Ürün',
+              barcode: p.barcode || p.sku || '-',
+              quantity: p.quantity || 10
+            }))
+          }
+        });
       },
 
       // ─── USERS (Firestore-backed, admin only) ─────────────────

@@ -49,7 +49,12 @@ export default function Transfer() {
     if (selectedProducts.length === 0) return;
     performTransfer(
       sourceLoc, destLoc,
-      selectedProducts.map(p => ({ productId: p.id, transferQty: p.transferQty }))
+      selectedProducts.map(p => ({ 
+        productId: p.id, 
+        transferQty: p.transferQty,
+        name: p.name,
+        sku: p.sku
+      }))
     );
     toast.success('Transfer İşlemi Başarılı!', {
       description: `${selectedProducts.length} ürün ${locations.find(l => l.id === destLoc)?.name} lokasyonuna gönderildi.`

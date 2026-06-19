@@ -1,14 +1,17 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, Plus, Store, Warehouse, Edit2, Trash2, X, CheckCircle2, Package } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { toast } from 'sonner';
 
 export default function Locations() {
+  const navigate = useNavigate();
   const locations = useStore(state => state.locations);
   const inventory = useStore(state => state.inventory);
   const addLocation = useStore(state => state.addLocation);
   const deleteLocation = useStore(state => state.deleteLocation);
   const updateLocation = useStore(state => state.updateLocation);
+  const updateProfile = useStore(state => state.updateProfile);
 
   const [showForm, setShowForm] = useState(false);
   const [editingLoc, setEditingLoc] = useState(null);
@@ -199,7 +202,7 @@ export default function Locations() {
           const Icon = cfg.icon;
 
           return (
-            <div key={loc.id} className="bg-white rounded-2xl border border-slate-200/80 card-shadow overflow-hidden hover:border-slate-300 transition-all group">
+            <div key={loc.id} onClick={() => { updateProfile({ activeLocationId: loc.id }); navigate('/inventory'); }} className="bg-white rounded-2xl border border-slate-200/80 card-shadow overflow-hidden hover:border-slate-300 hover:shadow-lg transition-all group cursor-pointer">
               {/* Card header with gradient */}
               <div className={`bg-gradient-to-br ${cfg.gradient} p-5`}>
                 <div className="flex items-start justify-between">
@@ -208,13 +211,13 @@ export default function Locations() {
                   </div>
                   <div className="flex gap-1">
                     <button
-                      onClick={() => openEdit(loc)}
+                      onClick={(e) => { e.stopPropagation(); openEdit(loc); }}
                       className="p-2 bg-white/15 hover:bg-white/25 rounded-xl text-white transition-colors"
                     >
                       <Edit2 size={14} />
                     </button>
                     <button
-                      onClick={() => handleDelete(loc)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(loc); }}
                       className="p-2 bg-white/15 hover:bg-red-500/40 rounded-xl text-white transition-colors"
                     >
                       <Trash2 size={14} />

@@ -55,14 +55,36 @@ export default function Reports() {
           : transferLog;
 
         if (filtered.length === 0) return buildInventoryRows();
-        return filtered.map(t => ({
-          'Tarih': new Date(t.date).toLocaleDateString('tr-TR'),
-          'Saat': new Date(t.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-          'Çıkış Lokasyonu': t.from,
-          'Giriş Lokasyonu': t.to,
-          'İşlem Yapan': t.user || '-',
-          'Ürün Sayısı': t.items?.length || '-',
-        }));
+        
+        const rows = [];
+        filtered.forEach(t => {
+          if (t.items && t.items.length > 0) {
+            t.items.forEach(item => {
+              rows.push({
+                'Tarih': new Date(t.date).toLocaleDateString('tr-TR'),
+                'Saat': new Date(t.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+                'Çıkış Lokasyonu': t.from,
+                'Giriş Lokasyonu': t.to,
+                'İşlem Yapan': t.user || '-',
+                'Ürün Adı': item.name || item.productName || '-',
+                'Miktar': item.quantity || 0,
+                'SKU / Barkod': item.sku || item.barcode || '-',
+              });
+            });
+          } else {
+            rows.push({
+              'Tarih': new Date(t.date).toLocaleDateString('tr-TR'),
+              'Saat': new Date(t.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+              'Çıkış Lokasyonu': t.from,
+              'Giriş Lokasyonu': t.to,
+              'İşlem Yapan': t.user || '-',
+              'Ürün Adı': 'Detay Yok',
+              'Miktar': t.itemCount || t.items?.length || '-',
+              'SKU / Barkod': '-',
+            });
+          }
+        });
+        return rows;
       }
       case 'count_diff': {
         const filteredCounts = dateRange.start
@@ -96,14 +118,20 @@ export default function Reports() {
         return buildInventoryRows().filter(r => r['Stok Miktarı'] < 20)
           .map(r => ({ ...r, 'Uyarı Seviyesi': r['Stok Miktarı'] < 5 ? 'KRİTİK' : 'DÜŞÜK' }));
       case 'staff_perf':
-        return users.map(u => ({
-          'Personel': u.name,
-          'E-posta': u.email,
-          'Rol': u.role,
-          'Sorumlu Lokasyon': u.location,
-          'Transfer Sayısı': transferLog.filter(t => t.user === u.name).length,
-          'Durum': u.status,
-        }));
+        return users.map(u => {
+          const userCounts = countLogs.filter(c => c.user === u.name || c.userName === u.name);
+          const totalDiscrepancies = userCounts.reduce((acc, c) => acc + (c.discrepancies || 0), 0);
+          return {
+            'Personel': u.name,
+            'E-posta': u.email,
+            'Rol': u.role,
+            'Sorumlu Lokasyon': u.location,
+            'Transfer Sayısı': transferLog.filter(t => t.user === u.name).length,
+            'Sayım Raporu Sayısı': userCounts.length,
+            'Toplam Sayım Uyuşmazlığı': totalDiscrepancies,
+            'Durum': u.status,
+          };
+        });
       default:
         return buildInventoryRows();
     }

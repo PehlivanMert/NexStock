@@ -12,13 +12,23 @@ export default function Home() {
   const products = useStore(state => state.products);
   const locations = useStore(state => state.locations);
   const transferLog = useStore(state => state.transferLog);
+  const updateProfile = useStore(state => state.updateProfile);
   const navigate = useNavigate();
 
+  const handleLocationClick = (locId) => {
+    updateProfile({ activeLocationId: locId });
+    navigate('/inventory');
+  };
+
   const perms = ROLE_PERMISSIONS[user?.role] || {};
-  const activeLocation = locations.find(l => l.id === user?.activeLocationId);
+  const activeLocation = user?.activeLocationId === 'all'
+    ? { name: 'Tüm Lokasyonlar', type: 'all' }
+    : locations.find(l => l.id === user?.activeLocationId);
 
   // ── Stats ──────────────────────────────────────────────────
-  const locationInventory = inventory.filter(i => i.locationId === user?.activeLocationId);
+  const locationInventory = user?.activeLocationId === 'all'
+    ? inventory
+    : inventory.filter(i => i.locationId === user?.activeLocationId);
   const totalItems = locationInventory.reduce((sum, i) => sum + i.quantity, 0);
   const uniqueProducts = locationInventory.length;
   const criticalItems = locationInventory.filter(i => i.quantity < 10);
@@ -90,8 +100,12 @@ export default function Home() {
           <div className="flex items-center gap-1.5 mt-2 bg-emerald-50 rounded-xl px-3 py-1.5 w-fit">
             <span className="h-2 w-2 bg-emerald-400 rounded-full animate-pulse flex-shrink-0"></span>
             <span className="text-sm text-emerald-700 font-semibold">{activeLocation.name}</span>
-            <span className="text-emerald-400">·</span>
-            <span className="text-xs text-emerald-600">{activeLocation.type === 'warehouse' ? 'Depo' : 'Mağaza'}</span>
+            {activeLocation.type !== 'all' && (
+              <>
+                <span className="text-emerald-400">·</span>
+                <span className="text-xs text-emerald-600">{activeLocation.type === 'warehouse' ? 'Depo' : 'Mağaza'}</span>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -265,10 +279,11 @@ export default function Home() {
             return (
               <div
                 key={loc.id}
-                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                onClick={() => handleLocationClick(loc.id)}
+                className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
                   isActive
                     ? 'bg-primary-50 border-primary-200'
-                    : 'bg-slate-50 border-transparent hover:border-slate-200'
+                    : 'bg-slate-50 border-transparent hover:border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 <div className="flex items-center gap-2.5">

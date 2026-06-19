@@ -13,7 +13,9 @@ export default function TerminalLayout() {
   const isHome = location.pathname === '/';
 
   // Real critical count for badge (scoped to active location)
-  const locationInventory = inventory.filter(i => i.locationId === user?.activeLocationId);
+  const locationInventory = user?.activeLocationId === 'all'
+    ? inventory
+    : inventory.filter(i => i.locationId === user?.activeLocationId);
   const criticalCount = locationInventory.filter(i => i.quantity < 10).length;
 
   const pageTitle = {
@@ -36,7 +38,7 @@ export default function TerminalLayout() {
   ].filter(n => n.show);
 
   return (
-    <div className="flex flex-col bg-slate-50" style={{ height: '100dvh' }}>
+    <div className="flex flex-col bg-slate-50 h-full w-full overflow-hidden">
       {/* ── Header ─────────────────────────────────────────── */}
       {!isScanning && (
         <header
