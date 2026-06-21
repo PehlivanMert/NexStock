@@ -69,8 +69,7 @@ export default function Inventory() {
 
     if (filters.shelf) data = data.filter(item => item.shelf === filters.shelf);
     if (filters.location) data = data.filter(item => item.locationId === filters.location);
-    if (filters.status === 'critical') data = data.filter(item => item.quantity < 10);
-    else if (filters.status === 'out_of_stock') data = data.filter(item => item.quantity === 0);
+    if (filters.status === 'critical') data = data.filter(item => item.quantity <= 0);
 
     data.sort((a, b) => {
       switch (sortBy) {
@@ -253,9 +252,9 @@ export default function Inventory() {
                 )}
                 
                 <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
-                  item.quantity < 10 ? 'bg-red-50' : 'bg-slate-100'
+                  item.quantity <= 0 ? 'bg-red-50' : 'bg-slate-100'
                 }`}>
-                  <Package size={22} className={item.quantity < 10 ? 'text-red-500' : 'text-slate-400'} />
+                  <Package size={22} className={item.quantity <= 0 ? 'text-red-500' : 'text-slate-400'} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-slate-800 truncate text-sm">{item.productName}</h3>
@@ -263,13 +262,13 @@ export default function Inventory() {
                   <div className="text-[11px] text-primary-600 font-semibold mt-1">{item.locationName}</div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className={`font-black text-xl leading-none ${item.quantity < 10 ? 'text-red-600' : 'text-slate-800'}`}>
+                  <div className={`font-black text-xl leading-none ${item.quantity <= 0 ? 'text-red-600' : 'text-slate-800'}`}>
                     {item.quantity}
                   </div>
                   {item.shelf && (
                     <div className="text-[10px] font-mono font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-1 inline-block">{item.shelf}</div>
                   )}
-                    {item.quantity < 10 && (
+                    {item.quantity <= 0 && (
                       <div className="text-[9px] text-red-500 font-black mt-0.5 uppercase tracking-wide">Kritik</div>
                     )}
                   </div>
@@ -327,8 +326,7 @@ export default function Inventory() {
                 <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">Durum</label>
                 <select value={filters.status} onChange={e => setFilters(p => ({ ...p, status: e.target.value }))} className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-primary-500/20 text-sm">
                   <option value="">Tümü</option>
-                  <option value="critical">Kritik Stok ( &lt; 10 )</option>
-                  <option value="out_of_stock">Tükenenler ( 0 )</option>
+                  <option value="critical">Tükendi ( 0 )</option>
                 </select>
               </div>
 
@@ -408,9 +406,9 @@ export default function Inventory() {
               <div className="flex justify-between items-start mb-5">
                 <div className="flex gap-3 items-center">
                   <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${
-                    selectedProduct.quantity < 10 ? 'bg-red-50' : 'bg-slate-100'
+                    selectedProduct.quantity <= 0 ? 'bg-red-50' : 'bg-slate-100'
                   }`}>
-                    <Package size={26} className={selectedProduct.quantity < 10 ? 'text-red-500' : 'text-slate-400'} />
+                    <Package size={26} className={selectedProduct.quantity <= 0 ? 'text-red-500' : 'text-slate-400'} />
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-slate-800 leading-tight">{selectedProduct.productName}</h2>
@@ -426,10 +424,10 @@ export default function Inventory() {
                 <>
                   <div className="space-y-3">
                     <div className={`flex justify-between items-center p-4 rounded-2xl ${
-                      selectedProduct.quantity < 10 ? 'bg-red-50 border border-red-100' : 'bg-slate-50'
+                      selectedProduct.quantity <= 0 ? 'bg-red-50 border border-red-100' : 'bg-slate-50'
                     }`}>
                       <span className="text-sm font-semibold text-slate-600">Mevcut Stok</span>
-                      <span className={`text-3xl font-black ${selectedProduct.quantity < 10 ? 'text-red-600' : 'text-slate-800'}`}>
+                      <span className={`text-3xl font-black ${selectedProduct.quantity <= 0 ? 'text-red-600' : 'text-slate-800'}`}>
                         {selectedProduct.quantity}
                       </span>
                     </div>

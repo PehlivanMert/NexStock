@@ -22,7 +22,7 @@ export default function TerminalLayout() {
     ? inventory
     : inventory.filter(i => i.locationId === user?.activeLocationId);
   
-  const lowStockAlerts = locationInventory.filter(i => i.quantity < 10).map(i => `low-${i.id}`);
+  const lowStockAlerts = locationInventory.filter(i => i.quantity <= 0).map(i => `low-${i.id}`);
   const transferAlerts = transferLog.filter(t => new Date(t.date).toDateString() === new Date().toDateString()).map(t => `trans-${t.id}`);
   const unreadCount = [...lowStockAlerts, ...transferAlerts].filter(id => !dismissedAlerts.includes(id) && !readAlerts.includes(id)).length;
 

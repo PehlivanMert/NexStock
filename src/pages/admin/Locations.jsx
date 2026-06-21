@@ -197,7 +197,7 @@ export default function Locations() {
           const locInv = inventory.filter(i => i.locationId === loc.id);
           const stockTotal = locInv.reduce((a, b) => a + b.quantity, 0);
           const stockTypes = locInv.length;
-          const criticalCount = locInv.filter(i => i.quantity < 10).length;
+          const criticalCount = locInv.filter(i => i.quantity <= 0).length;
           const cfg = typeConfig[loc.type] || typeConfig.store;
           const Icon = cfg.icon;
 

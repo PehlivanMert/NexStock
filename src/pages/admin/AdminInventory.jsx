@@ -34,10 +34,10 @@ export default function AdminInventory() {
     (item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
      item.sku.toLowerCase().includes(searchTerm.toLowerCase())) &&
     (filterLoc === '' || item.locationId === filterLoc) &&
-    (!filterCritical || item.quantity < 10)
+    (!filterCritical || item.quantity <= 0)
   );
 
-  const criticalCount = combinedData.filter(i => i.quantity < 10).length;
+  const criticalCount = combinedData.filter(i => i.quantity <= 0).length;
 
   const openEdit = (item) => {
     setEditItem(item);
@@ -220,8 +220,8 @@ export default function AdminInventory() {
                   <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${item.quantity < 10 ? 'bg-red-50' : 'bg-slate-100'}`}>
-                          <Package size={16} className={item.quantity < 10 ? 'text-red-500' : 'text-slate-400'} />
+                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${item.quantity <= 0 ? 'bg-red-50' : 'bg-slate-100'}`}>
+                          <Package size={16} className={item.quantity <= 0 ? 'text-red-500' : 'text-slate-400'} />
                         </div>
                         <span className="font-semibold text-slate-800">{item.productName}</span>
                       </div>
@@ -238,10 +238,10 @@ export default function AdminInventory() {
                     <td className="px-5 py-4 font-mono text-sm text-slate-600">{item.shelf || '—'}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
-                        <span className={`font-black text-lg ${item.quantity < 10 ? 'text-red-600' : 'text-slate-800'}`}>
+                        <span className={`font-black text-lg ${item.quantity <= 0 ? 'text-red-600' : 'text-slate-800'}`}>
                           {item.quantity}
                         </span>
-                        {item.quantity < 10 && (
+                        {item.quantity <= 0 && (
                           <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-black">KRİTİK</span>
                         )}
                       </div>

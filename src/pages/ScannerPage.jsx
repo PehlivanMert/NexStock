@@ -35,7 +35,7 @@ export default function ScannerPage() {
 
   if (scannedData) {
     const totalQty = scannedProduct?.invRecords?.reduce((s, r) => s + r.quantity, 0) || 0;
-    const hasCritical = scannedProduct?.invRecords?.some(r => r.quantity < 10);
+    const hasCritical = scannedProduct?.invRecords?.some(r => r.quantity <= 0);
 
     return (
       <div className="flex flex-col h-full bg-slate-50">
@@ -102,10 +102,10 @@ export default function ScannerPage() {
                           <div className="text-xs text-slate-400 mt-0.5">Raf: <span className="font-mono font-semibold">{inv.shelf || '-'}</span></div>
                         </div>
                         <div className="text-right">
-                          <div className={`text-2xl font-black ${inv.quantity < 10 ? 'text-red-600' : 'text-slate-800'}`}>
+                          <div className={`text-2xl font-black ${inv.quantity <= 0 ? 'text-red-600' : 'text-slate-800'}`}>
                             {inv.quantity}
                           </div>
-                          {inv.quantity < 10 && (
+                          {inv.quantity <= 0 && (
                             <div className="text-[9px] text-red-500 font-black uppercase">Kritik ⚠</div>
                           )}
                         </div>

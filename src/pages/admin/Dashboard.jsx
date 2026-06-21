@@ -12,7 +12,7 @@ export default function AdminDashboard() {
 
   const totalProducts = inventory.reduce((acc, curr) => acc + curr.quantity, 0);
   const activeLocationsCount = locations.filter(l => l.status === 'active').length;
-  const criticalProductsCount = inventory.filter(i => i.quantity < 10).length;
+  const criticalProductsCount = inventory.filter(i => i.quantity <= 0).length;
   const totalTransfers = transferLog.length;
 
   const todayTransfers = transferLog.filter(t =>
@@ -36,7 +36,7 @@ export default function AdminDashboard() {
   const locationData = locations.map(loc => ({
     name: loc.name,
     stok: inventory.filter(i => i.locationId === loc.id).reduce((a, b) => a + b.quantity, 0),
-    kritik: inventory.filter(i => i.locationId === loc.id && i.quantity < 10).length,
+    kritik: inventory.filter(i => i.locationId === loc.id && i.quantity <= 0).length,
   }));
 
   const kpiCards = [

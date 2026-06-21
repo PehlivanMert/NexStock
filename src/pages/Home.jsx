@@ -31,7 +31,7 @@ export default function Home() {
     : inventory.filter(i => i.locationId === user?.activeLocationId);
   const totalItems = locationInventory.reduce((sum, i) => sum + i.quantity, 0);
   const uniqueProducts = locationInventory.length;
-  const criticalItems = locationInventory.filter(i => i.quantity < 10);
+  const criticalItems = locationInventory.filter(i => i.quantity <= 0);
 
   const today = new Date().toDateString();
   const todayTransfers = transferLog.filter(t => new Date(t.date).toDateString() === today);
@@ -181,7 +181,7 @@ export default function Home() {
           <div className="space-y-3.5">
             {topProducts.map((item, i) => {
               const pct = Math.round((item.quantity / maxQty) * 100);
-              const isCritical = item.quantity < 10;
+              const isCritical = item.quantity <= 0;
               return (
                 <div key={item.id} className="animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
                   <div className="flex justify-between items-center mb-1.5">
@@ -273,7 +273,7 @@ export default function Home() {
           {locations.filter(l => l.status === 'active').map(loc => {
             const locInv = inventory.filter(i => i.locationId === loc.id);
             const locTotal = locInv.reduce((s, i) => s + i.quantity, 0);
-            const locCritical = locInv.filter(i => i.quantity < 10).length;
+            const locCritical = locInv.filter(i => i.quantity <= 0).length;
             const isActive = loc.id === user?.activeLocationId;
 
             return (

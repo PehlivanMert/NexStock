@@ -21,7 +21,7 @@ export default function Alerts() {
       : inventory.filter(i => i.locationId === user?.activeLocationId);
 
     const lowStockItems = locationInventory
-      .filter(inv => inv.quantity < 10)
+      .filter(inv => inv.quantity <= 0)
       .map(inv => ({
         id: `low-${inv.id}`,
         productName: products.find(p => p.id === inv.productId)?.name || 'Bilinmeyen',
