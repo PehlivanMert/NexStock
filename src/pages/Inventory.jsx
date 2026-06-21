@@ -1,4 +1,4 @@
-import { Package, Search, Plus, X, Edit2, Trash2, Save, SlidersHorizontal, CheckSquare, Square, MoreVertical, MapPin, Layers } from 'lucide-react';
+import { Package, Search, Plus, Minus, X, Edit2, Trash2, Save, SlidersHorizontal, CheckSquare, Square, MoreVertical, MapPin, Layers } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -261,17 +261,34 @@ export default function Inventory() {
                   <p className="text-xs text-slate-400 font-mono mt-0.5 truncate">{item.sku}</p>
                   <div className="text-[11px] text-primary-600 font-semibold mt-1">{item.locationName}</div>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className={`font-black text-xl leading-none ${item.quantity <= 0 ? 'text-red-600' : 'text-slate-800'}`}>
-                    {item.quantity}
-                  </div>
+                <div className="text-right shrink-0 flex flex-col items-end">
+                  {!selectMode && perms.canImport ? (
+                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-0.5 mt-1" onClick={e => e.stopPropagation()}>
+                      <button 
+                        onClick={() => updateInventoryItem(item.id, { quantity: Math.max(0, item.quantity - 1) })}
+                        className="h-7 w-7 flex items-center justify-center text-slate-500 hover:bg-white hover:text-slate-800 rounded-lg active:scale-90 transition-all shadow-sm"
+                      ><Minus size={14} strokeWidth={3}/></button>
+                      <div className={`w-8 text-center font-black text-lg leading-none ${item.quantity <= 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                        {item.quantity}
+                      </div>
+                      <button 
+                        onClick={() => updateInventoryItem(item.id, { quantity: item.quantity + 1 })}
+                        className="h-7 w-7 flex items-center justify-center text-slate-500 hover:bg-white hover:text-slate-800 rounded-lg active:scale-90 transition-all shadow-sm"
+                      ><Plus size={14} strokeWidth={3}/></button>
+                    </div>
+                  ) : (
+                    <div className={`font-black text-xl leading-none mt-1 ${item.quantity <= 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                      {item.quantity}
+                    </div>
+                  )}
+
                   {item.shelf && (
                     <div className="text-[10px] font-mono font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-1 inline-block">{item.shelf}</div>
                   )}
-                    {item.quantity <= 0 && (
-                      <div className="text-[9px] text-red-500 font-black mt-0.5 uppercase tracking-wide">Kritik</div>
-                    )}
-                  </div>
+                  {item.quantity <= 0 && (
+                    <div className="text-[9px] text-red-500 font-black mt-0.5 uppercase tracking-wide">Kritik</div>
+                  )}
+                </div>
                 </div>
               );
             })}

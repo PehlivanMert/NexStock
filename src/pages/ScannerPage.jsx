@@ -33,6 +33,21 @@ export default function ScannerPage() {
   const handleClose = () => navigate(-1);
   const handleRescan = () => { setScannedData(null); setScannedProduct(null); };
 
+  const handleTransfer = () => {
+    if (scannedProduct?.invRecords?.length > 0) {
+      // Find the location with most stock, or just the first one
+      const sourceLoc = [...scannedProduct.invRecords].sort((a, b) => b.quantity - a.quantity)[0].locationId;
+      navigate('/transfer', { 
+        state: { 
+          autoProduct: scannedProduct.id,
+          autoSourceLoc: sourceLoc
+        } 
+      });
+    } else {
+      navigate('/transfer');
+    }
+  };
+
   if (scannedData) {
     const totalQty = scannedProduct?.invRecords?.reduce((s, r) => s + r.quantity, 0) || 0;
     const hasCritical = scannedProduct?.invRecords?.some(r => r.quantity <= 0);
@@ -120,7 +135,7 @@ export default function ScannerPage() {
               {/* Quick Actions */}
               <div className="grid grid-cols-3 gap-2.5">
                 {[
-                  { label: 'Transfer', icon: ArrowRightLeft, path: '/transfer', gradient: 'from-violet-500 to-violet-600', shadow: 'shadow-violet-400/30' },
+                  { label: 'Transfer', icon: ArrowRightLeft, action: handleTransfer, gradient: 'from-violet-500 to-violet-600', shadow: 'shadow-violet-400/30' },
                   { label: 'Sayım', icon: ClipboardList, path: '/count', gradient: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-400/30' },
                   { label: 'Yeniden Tara', icon: RotateCcw, action: handleRescan, gradient: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-400/30' },
                 ].map((item) => {

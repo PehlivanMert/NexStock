@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ScanBarcode, Save, MapPin, CheckCircle, Minus, Plus, ClipboardCheck } from 'lucide-react';
+import { ScanBarcode, Save, MapPin, CheckCircle, Minus, Plus, ClipboardCheck, Search } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import BarcodeScanner from '../components/scanner/BarcodeScanner';
 import { toast } from 'sonner';
@@ -14,6 +14,8 @@ export default function Count() {
   const [selectedLocation, setSelectedLocation] = useState('');
   const [countingData, setCountingData] = useState([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterMode, setFilterMode] = useState('all'); // 'all', 'scanned', 'diff'
 
   useEffect(() => {
     if (!selectedLocation) { setCountingData([]); return; }
@@ -102,21 +104,21 @@ export default function Count() {
         {/* Stats bar */}
         {selectedLocation && (
           <div className="flex gap-2 mt-3">
-            <div className="flex-1 bg-primary-50 rounded-xl p-2.5 text-center">
+            <button onClick={() => setFilterMode('scanned')} className={`flex-1 rounded-xl p-2 text-center border-2 transition-all ${filterMode === 'scanned' ? 'bg-primary-100 border-primary-500' : 'bg-primary-50 border-transparent hover:border-primary-200'}`}>
               <div className="text-lg font-black text-primary-700">{scannedCount}</div>
-              <div className="text-[10px] text-primary-500 font-medium">Ürün Okutuldu</div>
-            </div>
-            <div className="flex-1 bg-slate-100 rounded-xl p-2.5 text-center">
+              <div className="text-[10px] text-primary-500 font-medium">Okutuldu</div>
+            </button>
+            <button onClick={() => setFilterMode('all')} className={`flex-1 rounded-xl p-2 text-center border-2 transition-all ${filterMode === 'all' ? 'bg-slate-200 border-slate-500' : 'bg-slate-100 border-transparent hover:border-slate-300'}`}>
               <div className="text-lg font-black text-slate-700">{countingData.length}</div>
-              <div className="text-[10px] text-slate-500 font-medium">Toplam Çeşit</div>
-            </div>
+              <div className="text-[10px] text-slate-500 font-medium">Tümü</div>
+            </button>
             {hasDiscrepancy && (
-              <div className="flex-1 bg-orange-50 rounded-xl p-2.5 text-center">
+              <button onClick={() => setFilterMode('diff')} className={`flex-1 rounded-xl p-2 text-center border-2 transition-all ${filterMode === 'diff' ? 'bg-orange-100 border-orange-500' : 'bg-orange-50 border-transparent hover:border-orange-200'}`}>
                 <div className="text-lg font-black text-orange-600">
                   {countingData.filter(i => i.counted > 0 && i.counted !== i.expected).length}
                 </div>
                 <div className="text-[10px] text-orange-500 font-medium">Fark Var</div>
-              </div>
+              </button>
             )}
           </div>
         )}
@@ -144,8 +146,22 @@ export default function Count() {
             </div>
           ) : (
             <div className="space-y-2.5">
+              <div className="relative mb-4">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Sayım listesinde ara..."
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 rounded-xl outline-none text-sm card-shadow transition-all"
+                />
+              </div>
+
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1">Sayım Listesi</h3>
-              {countingData.filter(item => item.counted > 0).map((item) => {
+              {countingData.filter(item => {
+                if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) && !item.sku.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+                if (filterMode === 'scanned' && item.counted === 0) return false;
+                if (filterMode === 'diff' && (item.counted === 0 || item.counted === item.expected)) return false;
+                return true;
+              }).map((item) => {
                 const diff = item.counted - item.expected;
                 const isMatch = diff === 0;
                 const isMissing = diff < 0;

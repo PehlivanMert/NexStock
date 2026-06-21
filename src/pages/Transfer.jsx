@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { ArrowRightLeft, CheckCircle2, ChevronRight, MapPin, Package, X } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle2, ChevronRight, MapPin, Package, X, Search } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 export default function Transfer() {
   const navigate = useNavigate();
+  const location = useLocation();
   const locations = useStore(state => state.locations);
   const products = useStore(state => state.products);
   const inventory = useStore(state => state.inventory);
@@ -15,10 +17,46 @@ export default function Transfer() {
   const [sourceLoc, setSourceLoc] = useState('');
   const [destLoc, setDestLoc] = useState('');
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Auto-select from Scanner
+  useEffect(() => {
+    if (location.state?.autoSourceLoc && location.state?.autoProduct) {
+      setSourceLoc(location.state.autoSourceLoc);
+      setStep(2);
+    }
+  }, [location.state]);
+
+  // Auto-select product after source location is set and step 2 is active
+  useEffect(() => {
+    if (location.state?.autoProduct && step === 2) {
+      const invItem = inventory.find(i => i.locationId === sourceLoc && i.productId === location.state.autoProduct && i.quantity > 0);
+      if (invItem && !selectedProducts.find(p => p.id === location.state.autoProduct)) {
+        // Find product to add
+        const product = products.find(p => p.id === invItem.productId);
+        if (product) {
+          setSelectedProducts([{
+            id: product.id, name: product.name, sku: product.sku,
+            transferQty: 1, maxQty: invItem.quantity
+          }]);
+        }
+      }
+      // Clear location state to avoid re-triggering
+      window.history.replaceState({}, document.title);
+    }
+  }, [step, sourceLoc, inventory, products, location.state, selectedProducts]);
 
   const sourceInventory = sourceLoc
     ? inventory.filter(i => i.locationId === sourceLoc && i.quantity > 0)
     : [];
+
+  const filteredSourceInventory = sourceInventory.filter(inv => {
+    if (!searchTerm) return true;
+    const p = products.find(prod => prod.id === inv.productId);
+    return p?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+           p?.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           p?.barcode?.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   const handleProductSelect = (invId) => {
     const inv = inventory.find(i => i.id === invId);
@@ -174,64 +212,76 @@ export default function Transfer() {
               <span className="font-semibold text-emerald-600 truncate">{destLocName}</span>
             </div>
 
-            {/* Product selector */}
-            <div className="bg-white rounded-2xl card-shadow border border-slate-100/80 p-4">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">Ürün Ekle</label>
-              <select
-                onChange={(e) => handleProductSelect(e.target.value)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-500/20"
-                defaultValue=""
-              >
-                <option value="" disabled>Ürün seçin...</option>
-                {sourceInventory.map(inv => {
-                  const p = products.find(prod => prod.id === inv.productId);
-                  const alreadySelected = selectedProducts.find(sp => sp.id === inv.productId);
-                  return (
-                    <option key={inv.id} value={inv.id} disabled={!!alreadySelected}>
-                      {p?.name} ({inv.quantity} mevcut)
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+            {/* Multi-Product Selector & Quantities */}
+            <div className="bg-white rounded-2xl card-shadow border border-slate-100/80 p-4 flex flex-col">
+              <div className="flex items-center justify-between mb-3 shrink-0">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
+                  Transfer Edilecek Ürünleri Seçin
+                </label>
+              </div>
+              
+              <div className="relative mb-3 shrink-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                  type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                  placeholder="Ürün ara..."
+                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                />
+              </div>
 
-            {/* Selected products */}
-            {selectedProducts.length > 0 ? (
-              <div className="space-y-2.5">
-                {selectedProducts.map((item) => (
-                  <div key={item.id} className="bg-white p-4 rounded-2xl card-shadow border border-slate-100/80 flex items-center gap-3">
-                    <div className="h-10 w-10 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center shrink-0">
-                      <Package size={19} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-sm text-slate-800 leading-tight truncate">{item.name}</h3>
-                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">Maks: {item.maxQty}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
-                        <button
-                          onClick={() => handleQtyChange(item.id, -1)}
-                          className="h-7 w-7 rounded-lg bg-white text-slate-700 font-black shadow-sm flex items-center justify-center active:scale-90 transition-transform"
-                        >−</button>
-                        <span className="w-7 text-center font-black text-sm">{item.transferQty}</span>
-                        <button
-                          onClick={() => handleQtyChange(item.id, 1)}
-                          className="h-7 w-7 rounded-lg bg-white text-slate-700 font-black shadow-sm flex items-center justify-center active:scale-90 transition-transform"
-                        >+</button>
-                      </div>
-                      <button onClick={() => handleRemoveProduct(item.id)} className="p-1.5 text-slate-300 hover:text-red-400 transition-colors">
-                        <X size={15} />
-                      </button>
-                    </div>
+              <div className="space-y-2">
+                {sourceInventory.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                    <Package size={28} className="mx-auto mb-2 opacity-40" />
+                    <p className="text-sm font-medium">Bu depoda ürün bulunmuyor</p>
                   </div>
-                ))}
+                ) : filteredSourceInventory.length === 0 ? (
+                  <div className="text-center py-4 text-slate-400 text-sm">Arama sonucu bulunamadı.</div>
+                ) : (
+                  filteredSourceInventory.map(inv => {
+                    const p = products.find(prod => prod.id === inv.productId);
+                    const selectedItem = selectedProducts.find(sp => sp.id === inv.productId);
+                    const isSelected = !!selectedItem;
+                    return (
+                      <div key={inv.id} className={`flex flex-col gap-3 p-3.5 rounded-xl border transition-all ${isSelected ? 'bg-primary-50/50 border-primary-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
+                        <div 
+                          className="flex items-center gap-3 cursor-pointer"
+                          onClick={() => {
+                            if (isSelected) handleRemoveProduct(inv.productId);
+                            else handleProductSelect(inv.id);
+                          }}
+                        >
+                          <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors shrink-0 ${isSelected ? 'bg-primary-600 border-primary-600 text-white' : 'bg-white border-slate-300'}`}>
+                            {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-3.5 h-3.5 stroke-[3]"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-sm text-slate-800 truncate">{p?.name || 'Bilinmeyen Ürün'}</div>
+                            <div className="text-[11px] font-medium text-slate-500 mt-0.5">{inv.quantity} adet mevcut</div>
+                          </div>
+                        </div>
+                        
+                        {isSelected && (
+                          <div className="flex items-center justify-between pl-8 animate-fade-in-up">
+                            <span className="text-xs font-bold text-slate-600">Transfer Adedi:</span>
+                            <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                              <button
+                                onClick={() => handleQtyChange(inv.productId, -1)}
+                                className="h-8 w-8 rounded-lg bg-slate-50 text-slate-700 font-black shadow-sm flex items-center justify-center active:scale-90 transition-transform"
+                              >−</button>
+                              <span className="w-10 text-center font-black text-sm">{selectedItem.transferQty}</span>
+                              <button
+                                onClick={() => handleQtyChange(inv.productId, 1)}
+                                className="h-8 w-8 rounded-lg bg-slate-50 text-slate-700 font-black shadow-sm flex items-center justify-center active:scale-90 transition-transform"
+                              >+</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
-            ) : (
-              <div className="text-center py-8 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
-                <Package size={28} className="mx-auto mb-2 opacity-40" />
-                <p className="text-sm font-medium">Üstten ürün seçin</p>
-              </div>
-            )}
+            </div>
 
             <div className="flex gap-3 pt-2">
               <button

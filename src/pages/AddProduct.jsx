@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScanBarcode, Plus, Package, Barcode, MapPin, Hash, Tag } from 'lucide-react';
+import { ScanBarcode, Plus, Package, Barcode, MapPin, Hash, Tag, Save } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import BarcodeScanner from '../components/scanner/BarcodeScanner';
@@ -19,7 +19,7 @@ export default function AddProduct() {
 
   const update = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, stayOnPage = false) => {
     e.preventDefault();
     if (!formData.locationId) { toast.error('Lütfen bir lokasyon seçin.'); return; }
     setSaving(true);
@@ -31,7 +31,12 @@ export default function AddProduct() {
         formData.shelf
       );
       toast.success('Ürün başarıyla eklendi!');
-      navigate(-1);
+      if (!stayOnPage) {
+        navigate(-1);
+      } else {
+        setFormData(prev => ({ ...prev, name: '', sku: '', barcode: '', quantity: '' }));
+        toast.info('Yeni ürün eklemeye devam edebilirsiniz.');
+      }
     } catch (err) {
       toast.error('Kayıt başarısız: ' + err.message);
     }
@@ -146,14 +151,25 @@ export default function AddProduct() {
           </FormSection>
 
           {/* Submit */}
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-2xl font-bold shadow-lg shadow-primary-500/30 flex justify-center items-center gap-2.5 active:scale-98 transition-all disabled:opacity-60"
-          >
-            {saving ? <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus size={20} />}
-            {saving ? 'Kaydediliyor...' : 'Ürünü Kaydet'}
-          </button>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={(e) => handleSubmit(e, true)}
+              disabled={saving}
+              className="flex-1 py-4 bg-white border-2 border-primary-100 text-primary-600 hover:bg-primary-50 rounded-2xl font-bold flex justify-center items-center gap-2 active:scale-98 transition-all disabled:opacity-60"
+            >
+              <Plus size={18} /> Yeni Ekle
+            </button>
+            <button
+              type="button"
+              onClick={(e) => handleSubmit(e, false)}
+              disabled={saving}
+              className="flex-[1.5] py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-2xl font-bold shadow-lg shadow-primary-500/30 flex justify-center items-center gap-2.5 active:scale-98 transition-all disabled:opacity-60"
+            >
+              {saving ? <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={20} />}
+              {saving ? 'Kaydediliyor...' : 'Kaydet & Çık'}
+            </button>
+          </div>
         </form>
       </div>
 
