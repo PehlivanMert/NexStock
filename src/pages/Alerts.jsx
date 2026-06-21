@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Clock, TrendingDown, Bell, CheckCircle, ChevronRight, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
@@ -10,70 +10,53 @@ export default function Alerts() {
   const products = useStore(state => state.products);
   const transferLog = useStore(state => state.transferLog);
 
-  const [dismissedAlerts, setDismissedAlerts] = useState(() => {
-    try {
-      const saved = localStorage.getItem('dismissedAlerts');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const dismissedAlerts = useStore(state => state.dismissedAlerts) || [];
+  const setDismissedAlerts = useStore(state => state.setDismissedAlerts);
+  const readAlerts = useStore(state => state.readAlerts) || [];
+  const setReadAlerts = useStore(state => state.setReadAlerts);
 
-  const [readAlerts, setReadAlerts] = useState(() => {
-    try {
-      const saved = localStorage.getItem('readAlerts');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const allAlerts = React.useMemo(() => {
+    const locationInventory = user?.activeLocationId === 'all'
+      ? inventory
+      : inventory.filter(i => i.locationId === user?.activeLocationId);
 
-  useEffect(() => {
-    localStorage.setItem('dismissedAlerts', JSON.stringify(dismissedAlerts));
-  }, [dismissedAlerts]);
+    const lowStockItems = locationInventory
+      .filter(inv => inv.quantity < 10)
+      .map(inv => ({
+        id: `low-${inv.id}`,
+        productName: products.find(p => p.id === inv.productId)?.name || 'Bilinmeyen',
+        quantity: inv.quantity,
+      }));
 
-  useEffect(() => {
-    localStorage.setItem('readAlerts', JSON.stringify(readAlerts));
-  }, [readAlerts]);
+    const recentTransfers = transferLog
+      .filter(t => new Date(t.date).toDateString() === new Date().toDateString())
+      .map((t) => ({
+        id: `trans-${t.id}`,
+        type: 'info',
+        title: 'Transfer İşlemi',
+        desc: `${t.from} → ${t.to} · ${t.items?.length || 0} kalem`,
+        time: new Date(t.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+        icon: Clock,
+        action: () => navigate('/admin/reports'),
+        actionLabel: 'Raporlara Git',
+      }));
 
-  const locationInventory = user?.activeLocationId === 'all'
-    ? inventory
-    : inventory.filter(i => i.locationId === user?.activeLocationId);
+    return [
+      ...lowStockItems.map((item) => ({
+        id: item.id,
+        type: 'critical',
+        title: 'Kritik Stok Uyarısı',
+        desc: `${item.productName} — Mevcut: ${item.quantity} adet`,
+        time: 'Sistem',
+        icon: TrendingDown,
+        action: () => navigate('/inventory'),
+        actionLabel: 'Stoğu Gör',
+      })),
+      ...recentTransfers.reverse(),
+    ];
+  }, [inventory, transferLog, products, user?.activeLocationId, navigate]);
 
-  const lowStockItems = locationInventory
-    .filter(inv => inv.quantity < 10)
-    .map(inv => ({
-      id: `low-${inv.id}`,
-      productName: products.find(p => p.id === inv.productId)?.name || 'Bilinmeyen',
-      quantity: inv.quantity,
-    }));
 
-  const recentTransfers = transferLog
-    .filter(t => new Date(t.date).toDateString() === new Date().toDateString())
-    .map((t) => ({
-      id: `trans-${t.id}`,
-      type: 'info',
-      title: 'Transfer İşlemi',
-      desc: `${t.from} → ${t.to} · ${t.items?.length || 0} kalem`,
-      time: new Date(t.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-      icon: Clock,
-      action: () => navigate('/admin/reports'),
-      actionLabel: 'Raporlara Git',
-    }));
-
-  const allAlerts = [
-    ...lowStockItems.map((item) => ({
-      id: item.id,
-      type: 'critical',
-      title: 'Kritik Stok Uyarısı',
-      desc: `${item.productName} — Mevcut: ${item.quantity} adet`,
-      time: 'Sistem',
-      icon: TrendingDown,
-      action: () => navigate('/inventory'),
-      actionLabel: 'Stoğu Gör',
-    })),
-    ...recentTransfers.reverse(),
-  ];
 
   const alerts = allAlerts.filter(a => !dismissedAlerts.includes(a.id));
   const unreadAlerts = alerts.filter(a => !readAlerts.includes(a.id));
@@ -145,7 +128,7 @@ export default function Alerts() {
                 {/* Colored left bar */}
                 <div className={`w-1 shrink-0 ${isCritical ? (isRead ? 'bg-red-300' : 'bg-red-500') : (isRead ? 'bg-blue-300' : 'bg-blue-400')}`} />
 
-                <div className="flex gap-3.5 p-4 flex-1 pr-14">
+                <div className="flex gap-3.5 p-4 flex-1 pr-20">
                   <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${
                     isCritical ? 'bg-red-50' : 'bg-blue-50'
                   }`}>

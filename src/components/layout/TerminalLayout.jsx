@@ -13,11 +13,18 @@ export default function TerminalLayout() {
   const perms = ROLE_PERMISSIONS[user?.role] || {};
   const isHome = location.pathname === '/';
 
+  const transferLog = useStore(state => state.transferLog) || [];
+  const dismissedAlerts = useStore(state => state.dismissedAlerts) || [];
+  const readAlerts = useStore(state => state.readAlerts) || [];
+
   // Real critical count for badge (scoped to active location)
   const locationInventory = user?.activeLocationId === 'all'
     ? inventory
     : inventory.filter(i => i.locationId === user?.activeLocationId);
-  const criticalCount = locationInventory.filter(i => i.quantity < 10).length;
+  
+  const lowStockAlerts = locationInventory.filter(i => i.quantity < 10).map(i => `low-${i.id}`);
+  const transferAlerts = transferLog.filter(t => new Date(t.date).toDateString() === new Date().toDateString()).map(t => `trans-${t.id}`);
+  const unreadCount = [...lowStockAlerts, ...transferAlerts].filter(id => !dismissedAlerts.includes(id) && !readAlerts.includes(id)).length;
 
   const pageTitle = {
     '/': 'NexStock',
@@ -34,7 +41,7 @@ export default function TerminalLayout() {
     { path: '/', icon: Home, label: 'Ana Sayfa', show: true },
     { path: '/scan', icon: ScanBarcode, label: 'Tara', show: true, isCTA: true },
     { path: '/inventory', icon: Package, label: 'Stok', show: true },
-    { path: '/alerts', icon: Bell, label: 'Uyarılar', badge: criticalCount, show: true },
+    { path: '/alerts', icon: Bell, label: 'Uyarılar', badge: unreadCount, show: true },
     { path: '/profile', icon: User, label: 'Profil', show: true },
   ].filter(n => n.show);
 

@@ -1,7 +1,7 @@
 import { Package, Search, Plus, X, Edit2, Trash2, Save, SlidersHorizontal, CheckSquare, Square, MoreVertical, MapPin, Layers } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 
 export default function Inventory() {
@@ -30,6 +30,13 @@ export default function Inventory() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [bulkEditForm, setBulkEditForm] = useState({ shelf: '', locationId: '' });
+
+  // Pagination / Lazy Rendering
+  const [displayLimit, setDisplayLimit] = useState(50);
+
+  useEffect(() => {
+    setDisplayLimit(50);
+  }, [searchTerm, filters, sortBy]);
 
   const pressTimer = useRef(null);
 
@@ -225,7 +232,8 @@ export default function Inventory() {
             <p className="font-semibold text-slate-500">Ürün bulunamadı</p>
           </div>
         ) : (
-          filteredData.map((item, i) => {
+          <>
+            {filteredData.slice(0, displayLimit).map((item, i) => {
             const isSelected = selectedIds.has(item.id);
             return (
               <div
@@ -261,13 +269,25 @@ export default function Inventory() {
                   {item.shelf && (
                     <div className="text-[10px] font-mono font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-1 inline-block">{item.shelf}</div>
                   )}
-                  {item.quantity < 10 && (
-                    <div className="text-[9px] text-red-500 font-black mt-0.5 uppercase tracking-wide">Kritik</div>
-                  )}
+                    {item.quantity < 10 && (
+                      <div className="text-[9px] text-red-500 font-black mt-0.5 uppercase tracking-wide">Kritik</div>
+                    )}
+                  </div>
                 </div>
+              );
+            })}
+            
+            {displayLimit < filteredData.length && (
+              <div className="py-4 flex justify-center">
+                <button 
+                  onClick={() => setDisplayLimit(p => p + 50)}
+                  className="px-6 py-3 bg-slate-200/50 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+                >
+                  Daha Fazla Göster ({filteredData.length - displayLimit} kaldı)
+                </button>
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
 

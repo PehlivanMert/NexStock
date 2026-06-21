@@ -89,9 +89,13 @@ export const useStore = create(
       // ─── UI STATE ────────────────────────────────────────────
       activeLocation: null,
       isScanning: false,
+      dismissedAlerts: [],
+      readAlerts: [],
 
       setActiveLocation: (locationId) => set({ activeLocation: locationId }),
       setScanning: (status) => set({ isScanning: status }),
+      setDismissedAlerts: (alerts) => set({ dismissedAlerts: typeof alerts === 'function' ? alerts(get().dismissedAlerts) : alerts }),
+      setReadAlerts: (alerts) => set({ readAlerts: typeof alerts === 'function' ? alerts(get().readAlerts) : alerts }),
 
       // Load all data from Firestore (called once after login)
       loadFromFirestore: async () => {
@@ -406,6 +410,8 @@ export const useStore = create(
         isLoggedIn: state.isLoggedIn,
         user: state.user,
         activeLocation: state.activeLocation,
+        dismissedAlerts: state.dismissedAlerts,
+        readAlerts: state.readAlerts,
       }),
     }
   )
