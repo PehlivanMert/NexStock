@@ -328,21 +328,43 @@ export const useStore = create(
       bulkImportProducts: async (productsArray, locationId) => {
         if (!get().dataLoaded) throw new Error("Data not loaded yet");
         const state = get();
-        const newProducts = [];
-        const newInventory = [];
+        const products = [...state.products];
+        const inventory = [...state.inventory];
+        
         productsArray.forEach((p, idx) => {
-          const pid = `p-bulk-${Date.now()}-${idx}`;
-          newProducts.push({ id: pid, name: p.name, sku: p.sku || `SKU-${Date.now()}-${idx}`, barcode: p.barcode || '-' });
-          newInventory.push({
-            id: `inv-bulk-${Date.now()}-${idx}`,
-            locationId: locationId || state.locations[0]?.id,
-            productId: pid,
-            quantity: p.quantity || 10,
-            shelf: 'Toplu Aktarım',
-          });
+          const pBarcode = (p.barcode || '').trim().toLowerCase();
+          const pName = (p.name || '').trim().toLowerCase();
+          
+          let existingProduct = products.find(prod => 
+            (pBarcode !== '-' && pBarcode !== '' && (prod.barcode || '').toLowerCase() === pBarcode) ||
+            ((prod.name || '').toLowerCase() === pName)
+          );
+
+          let pid;
+          if (existingProduct) {
+            pid = existingProduct.id;
+            // Optionally update empty fields
+            if (!existingProduct.barcode || existingProduct.barcode === '-') existingProduct.barcode = p.barcode || '-';
+          } else {
+            pid = `p-bulk-${Date.now()}-${idx}`;
+            products.push({ id: pid, name: p.name, sku: p.sku || `SKU-${Date.now()}-${idx}`, barcode: p.barcode || '-' });
+          }
+
+          let existingInv = inventory.find(inv => inv.productId === pid && inv.locationId === (locationId || state.locations[0]?.id));
+          if (existingInv) {
+            existingInv.quantity = (existingInv.quantity || 0) + (p.quantity || 0); // Adding to existing quantity
+            if (p.shelf && p.shelf !== 'Toplu Aktarım') existingInv.shelf = p.shelf;
+          } else {
+            inventory.push({
+              id: `inv-bulk-${Date.now()}-${idx}`,
+              locationId: locationId || state.locations[0]?.id,
+              productId: pid,
+              quantity: p.quantity || 0,
+              shelf: p.shelf || 'Toplu Aktarım',
+            });
+          }
         });
-        const products = [...state.products, ...newProducts];
-        const inventory = [...state.inventory, ...newInventory];
+
         set({ products, inventory });
         await Promise.all([saveProducts(products), saveInventory(inventory)]);
         const u = state.user;
@@ -357,7 +379,7 @@ export const useStore = create(
             items: productsArray.map(p => ({
               name: p.name || 'İsimsiz Ürün',
               barcode: p.barcode || p.sku || '-',
-              quantity: p.quantity || 10
+              quantity: p.quantity || 0
             }))
           }
         });

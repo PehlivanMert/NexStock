@@ -12,9 +12,9 @@ import * as XLSX from 'xlsx';
 // Tries to detect standard column names in multiple languages
 const COL = {
   name:     ['ad', 'adi', 'name', 'ürün adı', 'product', 'product name', 'urun'],
-  sku:      ['sku', 'kod', 'code', 'stok kodu', 'item code', 'product code', 'stock code'],
-  barcode:  ['barkod', 'barcode', 'ean', 'gtin'],
-  quantity: ['miktar', 'adet', 'qty', 'quantity', 'stok', 'stock', 'amount'],
+  sku:      ['sku', 'kod', 'code', 'stok kodu', 'item code', 'product code', 'stock code', 'ürün kodu'],
+  barcode:  ['barkod', 'barcode', 'ean', 'gtin', 'ürün kodu', 'urun kodu'],
+  quantity: ['miktar', 'adet', 'qty', 'quantity', 'stok', 'stock', 'amount', 'envanter'],
   shelf:    ['raf', 'shelf', 'location', 'lokasyon', 'bölüm', 'section'],
 };
 
@@ -24,26 +24,62 @@ function detectCol(header, candidates) {
 }
 
 function parseRows(worksheet) {
-  const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-  if (!json.length) return [];
+  const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+  if (!rows.length) return [];
 
-  const headers = Object.keys(json[0]);
+  let headerRowIndex = -1;
+  let nameColIdx = -1, skuColIdx = -1, barcodeColIdx = -1, qtyColIdx = -1, shelfColIdx = -1;
 
-  const nameKey     = headers.find(h => detectCol(h, COL.name));
-  const skuKey      = headers.find(h => detectCol(h, COL.sku));
-  const barcodeKey  = headers.find(h => detectCol(h, COL.barcode));
-  const quantityKey = headers.find(h => detectCol(h, COL.quantity));
-  const shelfKey    = headers.find(h => detectCol(h, COL.shelf));
+  for (let i = 0; i < Math.min(20, rows.length); i++) {
+    const r = rows[i];
+    let foundName = -1, foundSku = -1, foundBarcode = -1, foundQty = -1, foundShelf = -1;
+    
+    r.forEach((cell, idx) => {
+      const c = cell?.toString().trim();
+      if (!c) return;
+      if (foundName === -1 && detectCol(c, COL.name)) foundName = idx;
+      if (foundSku === -1 && detectCol(c, COL.sku)) foundSku = idx;
+      if (foundBarcode === -1 && detectCol(c, COL.barcode)) foundBarcode = idx;
+      if (foundQty === -1 && detectCol(c, COL.quantity)) foundQty = idx;
+      if (foundShelf === -1 && detectCol(c, COL.shelf)) foundShelf = idx;
+    });
 
-  return json
-    .map((row, i) => ({
-      name:     (nameKey ? String(row[nameKey]) : '').trim() || `Ürün ${i + 1}`,
-      sku:      (skuKey ? String(row[skuKey]) : '').trim() || '',
-      barcode:  (barcodeKey ? String(row[barcodeKey]) : '').trim() || '-',
-      quantity: parseInt(quantityKey ? row[quantityKey] : 10) || 0,
-      shelf:    (shelfKey ? String(row[shelfKey]) : '').trim() || 'Toplu Aktarım',
-    }))
-    .filter(r => r.name && r.name !== 'Ürün 0');
+    if (foundName >= 0 || foundBarcode >= 0 || foundSku >= 0) {
+      headerRowIndex = i;
+      nameColIdx = foundName;
+      skuColIdx = foundSku;
+      barcodeColIdx = foundBarcode;
+      qtyColIdx = foundQty;
+      shelfColIdx = foundShelf;
+      break;
+    }
+  }
+
+  if (headerRowIndex === -1) return [];
+
+  const parsed = [];
+  for (let i = headerRowIndex + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.every(c => !c)) continue;
+    
+    const name = nameColIdx >= 0 ? String(r[nameColIdx]).trim() : '';
+    const sku = skuColIdx >= 0 ? String(r[skuColIdx]).trim() : '';
+    const barcode = barcodeColIdx >= 0 ? String(r[barcodeColIdx]).trim() : '';
+    let quantity = qtyColIdx >= 0 ? parseInt(r[qtyColIdx], 10) : 0;
+    if (isNaN(quantity)) quantity = 0;
+    const shelf = shelfColIdx >= 0 ? String(r[shelfColIdx]).trim() : '';
+
+    if (name || barcode || sku) {
+      parsed.push({
+        name: name || `Ürün ${i}`,
+        sku: sku || '',
+        barcode: barcode || '-',
+        quantity: quantity,
+        shelf: shelf || 'Toplu Aktarım',
+      });
+    }
+  }
+  return parsed;
 }
 
 function parseCsv(text) {

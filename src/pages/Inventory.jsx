@@ -53,10 +53,11 @@ export default function Inventory() {
   const activeLocations = locations.filter(l => l.status === 'active');
 
   const filteredData = useMemo(() => {
+    const term = searchTerm.toLowerCase();
     let data = combinedData.filter(item =>
-      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.barcode.includes(searchTerm)
+      (item.productName || '').toLowerCase().includes(term) ||
+      (item.sku || '').toLowerCase().includes(term) ||
+      (item.barcode || '').toLowerCase().includes(term)
     );
 
     if (filters.shelf) data = data.filter(item => item.shelf === filters.shelf);

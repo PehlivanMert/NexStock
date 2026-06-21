@@ -1,63 +1,55 @@
-# NexStock - Akıllı Envanter ve Stok Takip PWA
+# NexStock PWA - Inventory Management System
 
-NexStock, mağazalar ve depolar arası envanter/stok takibini sağlamak amacıyla geliştirilmiş, "offline-first" (çevrimdışı çalışabilen) modern bir PWA (Progressive Web App) projesidir. Sistem, masaüstünde kapsamlı bir "Yönetim Paneli", mobil cihazlarda ise "El Terminali" hissiyatıyla çalışacak şekilde tasarlanmıştır.
+NexStock is a modern, responsive, and robust Progressive Web Application (PWA) designed for advanced inventory management. It features a glassmorphism-inspired UI, real-time database synchronization via Firebase Firestore, offline capabilities, and built-in hardware integration for barcode scanning.
 
-## 🚀 Sürüm Durumu: Production-Ready (v1.1.0)
+## Key Features
+* **Progressive Web App (PWA)**: Installable on iOS and Android devices, offering a native app experience with offline support.
+* **Firebase Integration**: Secure user authentication and real-time database updates via Firestore.
+* **Role-Based Access Control (RBAC)**: Distinct permissions for Admins, Managers, and Staff members.
+* **Barcode Scanning**: Built-in camera barcode scanner with flashlight (torch) support for quick inventory counts and transfers.
+* **Bulk Data Import**: Smart Excel/CSV parsing engine with dynamic header detection for rapid stock initialization and updates.
+* **Multi-Location Support**: Manage inventory seamlessly across different warehouses and stores.
+* **Activity & Transfer Logging**: Comprehensive tracking of all inventory movements, user activities, and stock counts.
+* **Modern UI/UX**: State-of-the-art glassmorphism design with responsive components and intuitive user flows.
 
-Bu sürüm ile birlikte uygulama kullanıcı deneyimi ve arayüz tutarlılığı açısından büyük iyileştirmeler aldı. Özellikle iOS cihazlardaki tasarım problemleri giderildi, tablo ve liste bazlı veri yönetimleri daha fonksiyonel hale getirildi.
+## Technologies Used
+* **Frontend**: React (Vite), TailwindCSS, Lucide React
+* **Backend & Auth**: Firebase (Auth, Firestore)
+* **State Management**: Zustand (with persistent storage)
+* **Utilities**: XLSX (for Excel parsing), ZXing (for barcode scanning), Recharts (for analytics)
 
-### ✨ Yeni Eklenen Özellikler
-- **Detaylı İşlem Kayıtları ve Modallar:** İşlem kayıtlarındaki transfer logları tek satır özet yerine, tıklanabilir detaylı bir modal penceresiyle ürün dökümü olarak sunuldu.
-- **Toplu Düzenleme ve Seçim Modu (Multi-Select):** PWA üzerinden uzun basılı tutarak veya seçim moduyla birden fazla ürün seçilebilir, raflar ve lokasyonlar **toplu olarak** aktarılabilir.
-- **Gelişmiş Raporlar:** Haftalık stok hareketlerinde kalem bazlı detaylandırılmış veri görünümü sağlandı, personel performansına sayım istatistikleri entegre edildi.
-- **Yönetilebilir Uyarılar:** Kritik stok bildirimleri gibi sistem uyarıları artık kullanıcı tarafından silinebilir/gizlenebilir yapıya kavuşturuldu.
-- **iOS SafeArea ve PWA Layout Optimizasyonu:** iOS cihazlardaki ekranın alt bölümünde içeriklerin kesilmesi problemi, `TerminalLayout` ve CSS güncellemeleriyle tamamen düzeltildi.
-- **Gelişmiş Filtre ve Sıralama:** Envanter ekranına depo bazlı, rafa göre ve stok seviyesine göre gelişmiş çoklu filtreleme ile sıralama algoritması eklendi.
-
----
-
-## 🔐 Rol Bazlı Yetki Kontrolü (RBAC)
-
-Uygulama içerisinde sıkı bir güvenlik matrisi (`ROLE_PERMISSIONS`) uygulanmaktadır. Arayüz ve sayfalar kullanıcı rolüne göre şekillenir:
-
-### 1. Yönetici (Admin)
-Sistemin mutlak sahibidir. Tüm alanlara, tüm ayarlara ve tüm lokasyonların istatistiklerine sınırsız erişimi vardır. 
-* *Yapabildikleri:* Yeni kullanıcı ekleme/silme, yeni depo tanımlama, ürün/stok silme, rapor indirme, tüm transferleri ve sayımları yönetme.
-
-### 2. Müdür (Manager)
-Operasyonlardan sorumlu kişidir. Terminal ekranına ve Yönetim Paneli'nin operasyonel kısımlarına erişebilir.
-* *Yapabildikleri:* Stok ekleme, sayım, transfer, envanter düzenleme, Excel raporları indirme.
-* *Yapamadıkları:* Sistem kullanıcılarını yönetemez, sistem depolarını kapatıp açamaz.
-
-### 3. Personel (Staff)
-Saha veya kasa çalışanlarıdır. **Kesinlikle Yönetim Paneli'ne erişimleri yoktur.** Uygulamayı sadece "Terminal" (Mobil Uygulama) modunda kullanabilirler.
-* *Yapabildikleri:* Kendilerine atanmış **Aktif Lokasyon**'daki stokları görüntüleme, barkod okutma, sayım yapma, diğer mağaza/depolara transfer başlatma.
-* *Yapamadıkları:* Yönetim paneline girme, excel raporu alma, var olan bir ürün kaydını sistemden komple silme, başka deponun verisine müdahale etme.
+## Setup Instructions
+1. Clone the repository and navigate to the root directory.
+2. Run `npm install` to install all necessary dependencies.
+3. Set up your Firebase project and update the configuration variables in `src/lib/firebase.js`.
+4. Run `npm run dev` to start the development server.
+5. Use `npm run build` to generate the production-ready PWA bundle.
 
 ---
 
-## 🛠️ Kurulum ve Çalıştırma
+# NexStock PWA - Envanter Yönetim Sistemi
 
-1. Bağımlılıkları yükleyin:
-   ```bash
-   npm install
-   ```
-2. Geliştirme sunucusunu başlatın:
-   ```bash
-   npm run dev
-   ```
-3. PWA özellikleri dahil tam derleme için:
-   ```bash
-   npm run build
-   ```
+NexStock, gelişmiş envanter ve stok yönetimi için tasarlanmış modern, duyarlı ve güçlü bir Progresif Web Uygulamasıdır (PWA). Şık glassmorphism arayüzü, Firebase Firestore ile gerçek zamanlı veri senkronizasyonu, çevrimdışı çalışma desteği ve barkod okuma özellikleri ile donatılmıştır.
 
-## 📂 Klasör Yapısı
-- `src/components/layout/`: Masaüstü ve Mobil layout bileşenleri (`TerminalLayout`, `DashboardLayout`).
-- `src/components/scanner/`: Barkod tarayıcı mantığı.
-- `src/pages/`: Terminal ekranları (Ana Sayfa, Sayım, Transfer, Profil).
-- `src/pages/admin/`: Yönetim ekranları (Dashboard, Users, Locations, Reports).
-- `src/store/`: Zustand state dosyaları (Veritabanı işlemleri ve Auth).
+## Temel Özellikler
+* **Progresif Web Uygulaması (PWA)**: iOS ve Android cihazlara uygulama olarak yüklenebilir, çevrimdışı destek ile yerel uygulama deneyimi sunar.
+* **Firebase Entegrasyonu**: Güvenli kullanıcı kimlik doğrulaması ve Firestore üzerinden anlık veri güncellemeleri.
+* **Rol Bazlı Erişim Kontrolü**: Yöneticiler (Admin), Müdürler (Manager) ve Personeller (Staff) için özel yetkilendirme sistemi.
+* **Barkod Tarayıcı**: Hızlı stok sayımı ve transfer işlemleri için el feneri (flaş) destekli dâhili kamera barkod okuyucusu.
+* **Toplu Veri Aktarımı**: Akıllı başlık tanıma sistemine sahip Excel/CSV okuma motoru sayesinde saniyeler içinde binlerce ürünü sisteme ekleme veya mevcudu güncelleme.
+* **Çoklu Lokasyon Desteği**: Envanterleri farklı depolar ve mağazalar arasında sorunsuz bir şekilde yönetin.
+* **Aktivite ve Transfer Günlükleri**: Yapılan tüm stok hareketlerinin, personel işlemlerinin ve sayımların detaylı takibi.
+* **Modern UI/UX Tasarım**: Tüm ekran boyutlarına tam uyumlu, akıcı ve yeni nesil glassmorphism odaklı modern tasarım.
 
-## 🔮 Sıradaki Geliştirmeler (Next Steps)
-- Firebase JSON veritabanı / kimlik bilgilerinin (`Auth`) entegrasyonu (Tüm fonksiyonlar altyapı olarak Firebase mantığıyla asenkron kullanıma uygundur, sadece store servisleri değişecektir).
-- Excel/PDF ayrıştırma algoritması (Cloud Functions & Cloud Vision / LLM API).
+## Kullanılan Teknolojiler
+* **Arayüz**: React (Vite), TailwindCSS, Lucide React
+* **Arka Uç & Giriş**: Firebase (Auth, Firestore)
+* **Durum Yönetimi**: Zustand (Yerel depolama desteği ile)
+* **Araçlar**: XLSX (Excel okuma), ZXing (Barkod tarama), Recharts (Analiz grafikleri)
+
+## Kurulum Talimatları
+1. Projeyi bilgisayarınıza indirin ve ana dizine gidin.
+2. Bağımlılıkları yüklemek için `npm install` komutunu çalıştırın.
+3. Kendi Firebase projenizi oluşturun ve bağlantı ayarlarını `src/lib/firebase.js` dosyasına ekleyin.
+4. Geliştirme sunucusunu başlatmak için `npm run dev` komutunu kullanın.
+5. Uygulamayı yayına hazırlamak için `npm run build` komutunu çalıştırın.

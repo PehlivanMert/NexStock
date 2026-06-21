@@ -19,9 +19,22 @@ export default function Alerts() {
     }
   });
 
+  const [readAlerts, setReadAlerts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('readAlerts');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   useEffect(() => {
     localStorage.setItem('dismissedAlerts', JSON.stringify(dismissedAlerts));
   }, [dismissedAlerts]);
+
+  useEffect(() => {
+    localStorage.setItem('readAlerts', JSON.stringify(readAlerts));
+  }, [readAlerts]);
 
   const locationInventory = user?.activeLocationId === 'all'
     ? inventory
@@ -63,29 +76,43 @@ export default function Alerts() {
   ];
 
   const alerts = allAlerts.filter(a => !dismissedAlerts.includes(a.id));
+  const unreadAlerts = alerts.filter(a => !readAlerts.includes(a.id));
+
+  const markAllAsRead = () => {
+    const newReads = alerts.map(a => a.id);
+    setReadAlerts(prev => [...new Set([...prev, ...newReads])]);
+  };
+
+  const deleteAll = () => {
+    const newDismissed = alerts.map(a => a.id);
+    setDismissedAlerts(prev => [...new Set([...prev, ...newDismissed])]);
+  };
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
       {/* Header */}
       <div className="bg-white px-4 py-4 border-b border-slate-100 shrink-0">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">Uyarılar</h1>
-            {alerts.filter(a => a.type === 'critical').length > 0 && (
+            {unreadAlerts.filter(a => a.type === 'critical').length > 0 && (
               <p className="text-sm text-red-600 font-semibold mt-0.5">
-                {alerts.filter(a => a.type === 'critical').length} kritik stok uyarısı
+                {unreadAlerts.filter(a => a.type === 'critical').length} kritik stok uyarısı
               </p>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {dismissedAlerts.length > 0 && (
-               <button onClick={() => setDismissedAlerts([])} className="text-xs text-slate-400 underline mr-2">Tümünü Geri Getir</button>
-            )}
             {alerts.length > 0 && (
-              <div className={`h-8 w-8 rounded-xl flex items-center justify-center ${
-                alerts.filter(a => a.type === 'critical').length > 0 ? 'bg-red-500' : 'bg-primary-500'
+              <>
+                <button onClick={markAllAsRead} className="text-xs font-bold text-primary-600 bg-primary-50 px-3 py-1.5 rounded-lg hover:bg-primary-100 transition-colors">Tümünü Okundu İşaretle</button>
+                <button onClick={deleteAll} className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors">Tümünü Sil</button>
+              </>
+            )}
+            {unreadAlerts.length > 0 && (
+              <div className={`h-8 w-8 ml-1 rounded-xl flex items-center justify-center ${
+                unreadAlerts.filter(a => a.type === 'critical').length > 0 ? 'bg-red-500' : 'bg-primary-500'
               }`}>
-                <span className="text-white text-sm font-black">{alerts.length}</span>
+                <span className="text-white text-sm font-black">{unreadAlerts.length}</span>
               </div>
             )}
           </div>
@@ -105,19 +132,20 @@ export default function Alerts() {
           alerts.map((alert, i) => {
             const Icon = alert.icon;
             const isCritical = alert.type === 'critical';
+            const isRead = readAlerts.includes(alert.id);
 
             return (
               <div
                 key={alert.id}
-                className={`bg-white rounded-2xl card-shadow border flex overflow-hidden animate-fade-in-up relative ${
+                className={`bg-white rounded-2xl card-shadow border flex overflow-hidden animate-fade-in-up relative transition-opacity ${
                   isCritical ? 'border-red-100' : 'border-slate-100/80'
-                }`}
+                } ${isRead ? 'opacity-60' : 'opacity-100'}`}
                 style={{ animationDelay: `${i * 50}ms` }}
               >
                 {/* Colored left bar */}
-                <div className={`w-1 shrink-0 ${isCritical ? 'bg-red-500' : 'bg-blue-400'}`} />
+                <div className={`w-1 shrink-0 ${isCritical ? (isRead ? 'bg-red-300' : 'bg-red-500') : (isRead ? 'bg-blue-300' : 'bg-blue-400')}`} />
 
-                <div className="flex gap-3.5 p-4 flex-1 pr-10">
+                <div className="flex gap-3.5 p-4 flex-1 pr-14">
                   <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${
                     isCritical ? 'bg-red-50' : 'bg-blue-50'
                   }`}>
@@ -125,10 +153,10 @@ export default function Alerts() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-slate-800 text-sm">{alert.title}</h3>
+                      <h3 className={`font-bold text-sm ${isRead ? 'text-slate-600' : 'text-slate-800'}`}>{alert.title}</h3>
                       <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap ml-2 shrink-0">{alert.time}</span>
                     </div>
-                    <p className="text-sm text-slate-500 mt-0.5 leading-snug">{alert.desc}</p>
+                    <p className={`text-sm mt-0.5 leading-snug ${isRead ? 'text-slate-400' : 'text-slate-500'}`}>{alert.desc}</p>
                     {alert.action && (
                       <button
                         onClick={alert.action}
@@ -143,13 +171,24 @@ export default function Alerts() {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => setDismissedAlerts(prev => [...prev, alert.id])}
-                  className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-                  title="Sil"
-                >
-                  <X size={16} />
-                </button>
+                <div className="absolute top-3 right-3 flex items-center gap-1">
+                  {!isRead && (
+                    <button
+                      onClick={() => setReadAlerts(prev => [...prev, alert.id])}
+                      className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-colors"
+                      title="Okundu İşaretle"
+                    >
+                      <CheckCircle size={16} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setDismissedAlerts(prev => [...prev, alert.id])}
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                    title="Sil"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
             );
           })
