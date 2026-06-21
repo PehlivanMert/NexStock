@@ -100,25 +100,24 @@ export const useStore = create(
       // Load all data from Firestore (called once after login)
       loadFromFirestore: async () => {
         try {
-          const appDataResult = await loadAppData().catch(err => {
-            console.error('Failed to load appData:', err);
-            return { products: [], inventory: [], locations: [] };
-          });
-
-          const transfersResult = await loadTransferLog(100).catch(err => {
-            console.error('Failed to load transfer logs:', err);
-            return [];
-          });
-
-          const countsResult = await loadCountLogs(50).catch(err => {
-            console.error('Failed to load count logs:', err);
-            return [];
-          });
-
-          const usersResult = await loadAllUsers().catch(err => {
-            console.error('Failed to load users:', err);
-            return [];
-          });
+          const [appDataResult, transfersResult, countsResult, usersResult] = await Promise.all([
+            loadAppData().catch(err => {
+              console.error('Failed to load appData:', err);
+              return { products: [], inventory: [], locations: [] };
+            }),
+            loadTransferLog(100).catch(err => {
+              console.error('Failed to load transfer logs:', err);
+              return [];
+            }),
+            loadCountLogs(50).catch(err => {
+              console.error('Failed to load count logs:', err);
+              return [];
+            }),
+            loadAllUsers().catch(err => {
+              console.error('Failed to load users:', err);
+              return [];
+            })
+          ]);
 
           set({
             products: appDataResult.products || [],
