@@ -51,6 +51,7 @@ export default function Inventory() {
           productName: product?.name || 'Bilinmeyen',
           sku: product?.sku || '',
           barcode: product?.barcode || '',
+          price: product?.price || 0,
           locationName: location?.name || '',
         };
       });
@@ -258,7 +259,12 @@ export default function Inventory() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-slate-800 truncate text-sm">{item.productName}</h3>
-                  <p className="text-xs text-slate-400 font-mono mt-0.5 truncate">{item.sku}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-slate-400 font-mono truncate">{item.sku}</p>
+                    {item.price > 0 && (
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">₺{item.price.toLocaleString('tr-TR')}</span>
+                    )}
+                  </div>
                   <div className="text-[11px] text-primary-600 font-semibold mt-1">{item.locationName}</div>
                 </div>
                 <div className="text-right shrink-0 flex flex-col items-end">
@@ -462,6 +468,12 @@ export default function Inventory() {
                       <div className="p-3.5 bg-slate-50 rounded-2xl">
                         <span className="text-xs text-slate-500 block mb-1 font-medium">Barkod</span>
                         <span className="text-sm font-mono font-bold text-slate-800">{selectedProduct.barcode}</span>
+                      </div>
+                    )}
+                    {selectedProduct.price > 0 && (
+                      <div className="p-3.5 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                        <span className="text-xs text-emerald-600 block mb-1 font-bold">Satış Fiyatı</span>
+                        <span className="text-lg font-black text-emerald-700">₺{selectedProduct.price.toLocaleString('tr-TR')}</span>
                       </div>
                     )}
                   </div>
