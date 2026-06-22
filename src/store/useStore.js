@@ -348,9 +348,10 @@ export const useStore = create(
             pid = existingProduct.id;
             // Optionally update empty fields
             if (!existingProduct.barcode || existingProduct.barcode === '-') existingProduct.barcode = p.barcode || '-';
+            if (p.price !== undefined) existingProduct.price = p.price;
           } else {
             pid = `p-bulk-${Date.now()}-${idx}`;
-            products.push({ id: pid, name: p.name, sku: p.sku || `SKU-${Date.now()}-${idx}`, barcode: p.barcode || '-' });
+            products.push({ id: pid, name: p.name, sku: p.sku || `SKU-${Date.now()}-${idx}`, barcode: p.barcode || '-', price: p.price || 0 });
           }
 
           let existingInv = inventory.find(inv => inv.productId === pid && inv.locationId === (locationId || state.locations[0]?.id));

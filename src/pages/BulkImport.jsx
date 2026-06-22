@@ -16,6 +16,7 @@ const COL = {
   barcode:  ['barkod', 'barcode', 'ean', 'gtin', 'ürün kodu', 'urun kodu'],
   quantity: ['miktar', 'adet', 'qty', 'quantity', 'stok', 'stock', 'amount', 'envanter'],
   shelf:    ['raf', 'shelf', 'location', 'lokasyon', 'bölüm', 'section'],
+  price:    ['fiyat', 'price', 'ücret', 'tutar', 'satış fiyatı', 'perakende satış fiyatı'],
 };
 
 function detectCol(header, candidates) {
@@ -28,20 +29,21 @@ function parseRows(worksheet) {
   if (!rows.length) return [];
 
   let headerRowIndex = -1;
-  let nameColIdx = -1, skuColIdx = -1, barcodeColIdx = -1, qtyColIdx = -1, shelfColIdx = -1;
+  let nameColIdx = -1, skuColIdx = -1, barcodeColIdx = -1, qtyColIdx = -1, shelfColIdx = -1, priceColIdx = -1;
 
   for (let i = 0; i < Math.min(20, rows.length); i++) {
     const r = rows[i];
-    let foundName = -1, foundSku = -1, foundBarcode = -1, foundQty = -1, foundShelf = -1;
+    let foundName = -1, foundSku = -1, foundBarcode = -1, foundQty = -1, foundShelf = -1, foundPrice = -1;
     
     r.forEach((cell, idx) => {
-      const c = cell?.toString().trim();
+      const c = cell?.toString().toLowerCase().trim();
       if (!c) return;
       if (foundName === -1 && detectCol(c, COL.name)) foundName = idx;
       if (foundSku === -1 && detectCol(c, COL.sku)) foundSku = idx;
       if (foundBarcode === -1 && detectCol(c, COL.barcode)) foundBarcode = idx;
       if (foundQty === -1 && detectCol(c, COL.quantity)) foundQty = idx;
       if (foundShelf === -1 && detectCol(c, COL.shelf)) foundShelf = idx;
+      if (foundPrice === -1 && detectCol(c, COL.price)) foundPrice = idx;
     });
 
     if (foundName >= 0 || foundBarcode >= 0 || foundSku >= 0) {
@@ -51,6 +53,7 @@ function parseRows(worksheet) {
       barcodeColIdx = foundBarcode;
       qtyColIdx = foundQty;
       shelfColIdx = foundShelf;
+      priceColIdx = foundPrice;
       break;
     }
   }
@@ -68,6 +71,8 @@ function parseRows(worksheet) {
     let quantity = qtyColIdx >= 0 ? parseInt(r[qtyColIdx], 10) : 0;
     if (isNaN(quantity)) quantity = 0;
     const shelf = shelfColIdx >= 0 ? String(r[shelfColIdx]).trim() : '';
+    let price = priceColIdx >= 0 ? parseFloat(String(r[priceColIdx]).replace(/,/g, '')) : 0;
+    if (isNaN(price)) price = 0;
 
     if (name || barcode || sku) {
       parsed.push({
@@ -76,6 +81,7 @@ function parseRows(worksheet) {
         barcode: barcode || '-',
         quantity: quantity,
         shelf: shelf || 'Toplu Aktarım',
+        price: price,
       });
     }
   }
@@ -97,6 +103,7 @@ function parseCsv(text) {
   const barcodeKey  = headers.findIndex(h => detectCol(h, COL.barcode));
   const quantityKey = headers.findIndex(h => detectCol(h, COL.quantity));
   const shelfKey    = headers.findIndex(h => detectCol(h, COL.shelf));
+  const priceKey    = headers.findIndex(h => detectCol(h, COL.price));
 
   return lines.slice(1).map((line, i) => {
     const cols = line.split(delimiter).map(c => c.replace(/"/g, '').trim());
@@ -106,6 +113,7 @@ function parseCsv(text) {
       barcode:  (barcodeKey >= 0 ? cols[barcodeKey] : '').trim() || '-',
       quantity: parseInt(quantityKey >= 0 ? cols[quantityKey] : '10') || 0,
       shelf:    (shelfKey >= 0 ? cols[shelfKey] : '').trim() || 'Toplu Aktarım',
+      price:    parseFloat(priceKey >= 0 ? cols[priceKey].replace(/,/g, '') : '0') || 0,
     };
   }).filter(r => r.name.trim());
 }
@@ -113,15 +121,15 @@ function parseCsv(text) {
 // ── Template download ─────────────────────────────────────────────────────────
 function downloadTemplate() {
   const templateData = [
-    { 'Ürün Adı': 'iPhone 15 Pro', 'SKU': 'IP15P-256', 'Barkod': '1234567890', 'Miktar': 25, 'Raf': 'A-01' },
-    { 'Ürün Adı': 'MacBook Air M2', 'SKU': 'MBA-M2-512', 'Barkod': '9876543210', 'Miktar': 10, 'Raf': 'B-02' },
-    { 'Ürün Adı': 'AirPods Pro 2', 'SKU': 'APP2-WHT', 'Barkod': '4561237890', 'Miktar': 50, 'Raf': 'C-03' },
+    { 'Ürün Adı': 'iPhone 15 Pro', 'SKU': 'IP15P-256', 'Barkod': '1234567890', 'Miktar': 25, 'Raf': 'A-01', 'Fiyat': 65000 },
+    { 'Ürün Adı': 'MacBook Air M2', 'SKU': 'MBA-M2-512', 'Barkod': '9876543210', 'Miktar': 10, 'Raf': 'B-02', 'Fiyat': 45000 },
+    { 'Ürün Adı': 'AirPods Pro 2', 'SKU': 'APP2-WHT', 'Barkod': '4561237890', 'Miktar': 50, 'Raf': 'C-03', 'Fiyat': 9000 },
   ];
   const ws = XLSX.utils.json_to_sheet(templateData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Ürünler');
   // Column widths
-  ws['!cols'] = [{ wch: 25 }, { wch: 18 }, { wch: 16 }, { wch: 10 }, { wch: 10 }];
+  ws['!cols'] = [{ wch: 25 }, { wch: 18 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
   XLSX.writeFile(wb, 'NexStock_Toplu_Aktarim_Sablonu.xlsx');
   toast.success('Şablon indirildi!', { description: 'NexStock_Toplu_Aktarim_Sablonu.xlsx' });
 }
@@ -270,6 +278,7 @@ export default function BulkImport() {
               <span><strong>Barkod:</strong> Barkod, Barcode, EAN</span>
               <span><strong>Miktar:</strong> Miktar, Adet, Qty, Stock</span>
               <span><strong>Raf:</strong> Raf, Shelf, Bölüm</span>
+              <span><strong>Fiyat:</strong> Fiyat, Price, Ücret, Tutar</span>
             </div>
           </div>
         </div>
@@ -429,7 +438,7 @@ export default function BulkImport() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50/80 border-b border-slate-100 sticky top-0">
                   <tr>
-                    {['Ürün Adı', 'SKU', 'Barkod', 'Miktar', 'Raf', ''].map(h => (
+                    {['Ürün Adı', 'SKU', 'Barkod', 'Miktar', 'Raf', 'Fiyat', ''].map(h => (
                       <th key={h} className="px-4 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -449,6 +458,7 @@ export default function BulkImport() {
                         />
                       </td>
                       <td className="px-4 py-2.5 text-slate-500 text-xs">{row.shelf}</td>
+                      <td className="px-4 py-2.5 text-slate-700 text-xs font-semibold">{row.price ? `${row.price} ₺` : '—'}</td>
                       <td className="px-4 py-2.5">
                         <button
                           onClick={() => removeRow(i)}
