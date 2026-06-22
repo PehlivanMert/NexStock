@@ -20,6 +20,16 @@ export default function Inventory() {
   const [editForm, setEditForm] = useState({});
   const [confirmDelete, setConfirmDelete] = useState(false);
   
+  const [exchangeRates, setExchangeRates] = useState(null);
+  const [showCurrencies, setShowCurrencies] = useState(false);
+
+  useEffect(() => {
+    fetch('https://api.exchangerate-api.com/v4/latest/TRY')
+      .then(res => res.json())
+      .then(data => setExchangeRates(data.rates))
+      .catch(console.error);
+  }, []);
+  
   // Filtering & Sorting
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({ shelf: '', location: '', status: '' });
@@ -471,9 +481,35 @@ export default function Inventory() {
                       </div>
                     )}
                     {selectedProduct.price > 0 && (
-                      <div className="p-3.5 bg-emerald-50 border border-emerald-100 rounded-2xl">
-                        <span className="text-xs text-emerald-600 block mb-1 font-bold">Satış Fiyatı</span>
-                        <span className="text-lg font-black text-emerald-700">₺{selectedProduct.price.toLocaleString('tr-TR')}</span>
+                      <div 
+                        onClick={() => setShowCurrencies(!showCurrencies)}
+                        className="p-3.5 bg-emerald-50 border border-emerald-100 rounded-2xl cursor-pointer hover:bg-emerald-100/70 transition-colors animate-fade-in"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs text-emerald-600 block mb-1 font-bold">Satış Fiyatı</span>
+                            <span className="text-lg font-black text-emerald-700">₺{selectedProduct.price.toLocaleString('tr-TR')}</span>
+                          </div>
+                          <div className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-colors ${showCurrencies ? 'bg-emerald-600 text-white' : 'bg-emerald-200/50 text-emerald-700'}`}>
+                            {showCurrencies ? 'Gizle' : 'Kur Çevir'}
+                          </div>
+                        </div>
+                        {showCurrencies && exchangeRates && (
+                            <div className="mt-3 pt-3 border-t border-emerald-200/50 grid grid-cols-3 gap-2 animate-fade-in-down">
+                                <div className="text-center bg-white/60 p-2 rounded-xl">
+                                    <span className="block text-[10px] font-bold text-blue-600 mb-0.5">EUR</span>
+                                    <span className="text-sm font-black text-blue-800">€{(selectedProduct.price * exchangeRates.EUR).toFixed(2)}</span>
+                                </div>
+                                <div className="text-center bg-white/60 p-2 rounded-xl">
+                                    <span className="block text-[10px] font-bold text-indigo-600 mb-0.5">USD</span>
+                                    <span className="text-sm font-black text-indigo-800">${(selectedProduct.price * exchangeRates.USD).toFixed(2)}</span>
+                                </div>
+                                <div className="text-center bg-white/60 p-2 rounded-xl">
+                                    <span className="block text-[10px] font-bold text-purple-600 mb-0.5">GBP</span>
+                                    <span className="text-sm font-black text-purple-800">£{(selectedProduct.price * exchangeRates.GBP).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        )}
                       </div>
                     )}
                   </div>

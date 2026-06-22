@@ -26,6 +26,7 @@ export default function AdminInventory() {
       productName: product?.name || 'Bilinmeyen',
       sku: product?.sku || '-',
       barcode: product?.barcode || '-',
+      price: product?.price || 0,
       locationName: location?.name || '-',
     };
   });
@@ -200,7 +201,7 @@ export default function AdminInventory() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50/80 border-b border-slate-100">
               <tr>
-                {['Ürün', 'SKU / Barkod', 'Lokasyon', 'Raf', 'Miktar', ''].map(h => (
+                {['Ürün', 'SKU / Barkod', 'Lokasyon', 'Raf', 'Fiyat', 'Miktar', ''].map(h => (
                   <th key={h} className="px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -236,6 +237,15 @@ export default function AdminInventory() {
                       </span>
                     </td>
                     <td className="px-5 py-4 font-mono text-sm text-slate-600">{item.shelf || '—'}</td>
+                    <td className="px-5 py-4">
+                      {item.price > 0 ? (
+                        <span className="inline-block px-2 py-1 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-lg border border-emerald-100">
+                          ₺{item.price.toLocaleString('tr-TR')}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <span className={`font-black text-lg ${item.quantity <= 0 ? 'text-red-600' : 'text-slate-800'}`}>
