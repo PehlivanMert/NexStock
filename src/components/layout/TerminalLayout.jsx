@@ -145,7 +145,7 @@ export default function TerminalLayout() {
                     {isActive && (
                       <div className="absolute inset-0 -m-2 bg-primary-50 rounded-xl" />
                     )}
-                    <div className={`relative transition-all duration-200 ${isActive ? 'scale-110' : 'scale-100'}`}>
+                    <div className="relative transition-all duration-200">
                       <Icon
                         size={22}
                         className={`transition-colors ${isActive ? 'text-primary-600' : 'text-slate-400'}`}
@@ -161,7 +161,7 @@ export default function TerminalLayout() {
                     )}
                   </div>
 
-                  <span className={`text-[10px] mt-1.5 leading-none transition-colors ${isActive ? 'font-bold text-primary-600' : 'font-medium text-slate-400'}`}>
+                  <span className={`text-[10px] mt-1.5 mb-1.5 leading-none transition-colors ${isActive ? 'font-bold text-primary-600' : 'font-medium text-slate-400'}`}>
                     {item.label}
                   </span>
                   
