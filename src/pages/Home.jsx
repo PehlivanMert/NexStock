@@ -270,6 +270,36 @@ export default function Home() {
         </div>
 
         <div className="space-y-2">
+          <div
+            onClick={() => handleLocationClick('all')}
+            className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+              user?.activeLocationId === 'all'
+                ? 'bg-primary-50 border-primary-200'
+                : 'bg-slate-50 border-transparent hover:border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold ${
+                user?.activeLocationId === 'all' ? 'bg-primary-600 text-white shadow-md shadow-primary-400/30' : 'bg-white text-slate-600 border border-slate-200'
+              }`}>
+                <Layers size={16} />
+              </div>
+              <div>
+                <p className={`text-sm font-bold leading-none ${user?.activeLocationId === 'all' ? 'text-primary-700' : 'text-slate-700'}`}>Tüm Lokasyonlar</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 capitalize">Genel Bakış</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-right">
+              <div>
+                <p className="text-sm font-extrabold text-slate-700">{inventory.reduce((s, i) => s + i.quantity, 0).toLocaleString('tr-TR')}</p>
+                <p className="text-[10px] text-slate-400">toplam adet</p>
+              </div>
+              {inventory.filter(i => i.quantity <= 0).length > 0 && (
+                <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-1 rounded-lg font-black">{inventory.filter(i => i.quantity <= 0).length} ⚠</span>
+              )}
+            </div>
+          </div>
+
           {locations.filter(l => l.status === 'active').map(loc => {
             const locInv = inventory.filter(i => i.locationId === loc.id);
             const locTotal = locInv.reduce((s, i) => s + i.quantity, 0);

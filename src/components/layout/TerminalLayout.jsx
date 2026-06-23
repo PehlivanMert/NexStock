@@ -161,14 +161,13 @@ export default function TerminalLayout() {
                     )}
                   </div>
 
+                  <span className={`text-[10px] mt-1.5 leading-none transition-colors ${isActive ? 'font-bold text-primary-600' : 'font-medium text-slate-400'}`}>
+                    {item.label}
+                  </span>
+                  
                   {/* Active indicator dot */}
-                  {isActive ? (
-                    <div className="h-1 w-4 bg-primary-600 rounded-full mt-1.5 shadow-sm shadow-primary-400/50" />
-                  ) : (
-                    <span className="text-[10px] mt-1.5 font-medium text-slate-400">{item.label}</span>
-                  )}
                   {isActive && (
-                    <span className="text-[10px] font-bold text-primary-600 leading-none">{item.label}</span>
+                    <div className="absolute bottom-0 h-1 w-4 bg-primary-600 rounded-t-full shadow-sm shadow-primary-400/50" />
                   )}
                 </Link>
               );
