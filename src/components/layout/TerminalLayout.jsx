@@ -140,26 +140,26 @@ export default function TerminalLayout() {
                   to={item.path}
                   className="flex flex-col items-center py-2 px-1 flex-1 relative transition-all"
                 >
-                  <div className="relative">
+                  <div className="relative flex flex-col items-center justify-center">
                     {/* Active background glow */}
                     {isActive && (
-                      <div className="absolute inset-0 -m-2 bg-primary-50 rounded-xl" />
+                      <div className="absolute inset-0 -mx-3 -mt-2 -mb-1 bg-primary-50 rounded-xl -z-10" />
                     )}
                     <Icon
                       size={22}
-                      className={`relative transition-colors ${isActive ? 'text-primary-600' : 'text-slate-400'}`}
+                      className={`relative z-10 transition-colors ${isActive ? 'text-primary-600' : 'text-slate-400'}`}
                       strokeWidth={isActive ? 2.5 : 1.8}
                     />
                     
                     {/* Badge */}
                     {item.badge > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
+                      <span className="absolute -top-1.5 -right-1.5 z-20 h-4 w-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
                         {item.badge > 9 ? '9+' : item.badge}
                       </span>
                     )}
                   </div>
 
-                  <span className={`text-[10px] mt-1.5 leading-none transition-colors ${isActive ? 'font-bold text-primary-600' : 'font-medium text-slate-400'}`}>
+                  <span className={`relative z-10 text-[10px] mt-1.5 leading-none transition-colors ${isActive ? 'font-bold text-primary-600' : 'font-medium text-slate-400'}`}>
                     {item.label}
                   </span>
                   
