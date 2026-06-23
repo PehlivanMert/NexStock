@@ -145,14 +145,12 @@ export default function TerminalLayout() {
                     {isActive && (
                       <div className="absolute inset-0 -m-2 bg-primary-50 rounded-xl" />
                     )}
-                    <div className="relative transition-all duration-200">
-                      <Icon
-                        size={22}
-                        className={`transition-colors ${isActive ? 'text-primary-600' : 'text-slate-400'}`}
-                        strokeWidth={isActive ? 2.5 : 1.8}
-                      />
-                    </div>
-
+                    <Icon
+                      size={22}
+                      className={`relative transition-colors ${isActive ? 'text-primary-600' : 'text-slate-400'}`}
+                      strokeWidth={isActive ? 2.5 : 1.8}
+                    />
+                    
                     {/* Badge */}
                     {item.badge > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
@@ -161,14 +159,12 @@ export default function TerminalLayout() {
                     )}
                   </div>
 
-                  <span className={`text-[10px] mt-1.5 mb-1.5 leading-none transition-colors ${isActive ? 'font-bold text-primary-600' : 'font-medium text-slate-400'}`}>
+                  <span className={`text-[10px] mt-1.5 leading-none transition-colors ${isActive ? 'font-bold text-primary-600' : 'font-medium text-slate-400'}`}>
                     {item.label}
                   </span>
                   
-                  {/* Active indicator dot */}
-                  {isActive && (
-                    <div className="absolute bottom-0 h-1 w-4 bg-primary-600 rounded-t-full shadow-sm shadow-primary-400/50" />
-                  )}
+                  {/* Active indicator dot (below text) */}
+                  <div className={`mt-1 h-1 w-4 rounded-full shadow-sm transition-all ${isActive ? 'bg-primary-600 shadow-primary-400/50' : 'bg-transparent shadow-none'}`} />
                 </Link>
               );
             })}
