@@ -129,7 +129,7 @@
 
 @keyframes marquee {
   0% { transform: translateX(0%); }
-  100% { transform: translateX(-100%); }
+  100% { transform: translateX(-50%); }
 }
 
 /* ── Utility Classes ───────────────────────────────────── */
@@ -143,7 +143,7 @@
     display: flex;
     width: max-content;
     white-space: nowrap;
-    animation: marquee 8s linear infinite;
+    animation: marquee 12s linear infinite;
   }
 
   .animate-scanline {
