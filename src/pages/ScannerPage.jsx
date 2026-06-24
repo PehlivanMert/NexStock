@@ -79,15 +79,15 @@ export default function ScannerPage() {
               {scannedProduct ? (
                 <div className="overflow-hidden">
                   <div className="text-xs text-green-400 font-bold mb-0.5">✓ Ürün Bulundu</div>
-                  <div className="overflow-hidden relative w-full h-8">
+                  <div className="overflow-hidden relative w-full h-9">
                     {isNameLong ? (
-                      <div className="absolute whitespace-nowrap animate-marquee flex gap-8">
-                        <h1 className="text-xl font-black text-white leading-tight">{scannedProduct.name}</h1>
-                        <h1 className="text-xl font-black text-white leading-tight">{scannedProduct.name}</h1>
-                        <h1 className="text-xl font-black text-white leading-tight">{scannedProduct.name}</h1>
+                      <div className="absolute whitespace-nowrap animate-marquee flex items-center gap-8 w-max h-full">
+                        <h1 className="text-xl font-black text-white leading-tight shrink-0">{scannedProduct.name}</h1>
+                        <h1 className="text-xl font-black text-white leading-tight shrink-0">{scannedProduct.name}</h1>
+                        <h1 className="text-xl font-black text-white leading-tight shrink-0">{scannedProduct.name}</h1>
                       </div>
                     ) : (
-                      <h1 className="text-xl font-black text-white leading-tight truncate">{scannedProduct.name}</h1>
+                      <h1 className="text-xl font-black text-white leading-tight truncate shrink-0">{scannedProduct.name}</h1>
                     )}
                   </div>
                   <p className="text-sm font-mono text-slate-400 mt-0.5">{scannedProduct.sku}</p>
