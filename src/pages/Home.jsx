@@ -270,14 +270,15 @@ export default function Home() {
         </div>
 
         <div className="space-y-2">
-          <div
-            onClick={() => handleLocationClick('all')}
-            className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
-              user?.activeLocationId === 'all'
-                ? 'bg-primary-50 border-primary-200'
-                : 'bg-slate-50 border-transparent hover:border-slate-200 hover:bg-slate-100'
-            }`}
-          >
+          {(!perms.canAccessAdmin && user?.activeLocationId !== 'all') ? null : (
+            <div
+              onClick={() => perms.canAccessAdmin && handleLocationClick('all')}
+              className={`flex items-center justify-between p-3 rounded-xl border transition-all ${perms.canAccessAdmin ? 'cursor-pointer' : ''} ${
+                user?.activeLocationId === 'all'
+                  ? 'bg-primary-50 border-primary-200'
+                  : 'bg-slate-50 border-transparent hover:border-slate-200 hover:bg-slate-100'
+              }`}
+            >
             <div className="flex items-center gap-2.5">
               <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold ${
                 user?.activeLocationId === 'all' ? 'bg-primary-600 text-white shadow-md shadow-primary-400/30' : 'bg-white text-slate-600 border border-slate-200'
@@ -299,8 +300,9 @@ export default function Home() {
               )}
             </div>
           </div>
+          )}
 
-          {locations.filter(l => l.status === 'active').map(loc => {
+          {locations.filter(l => l.status === 'active' && (perms.canAccessAdmin || user?.activeLocationId === 'all' || l.id === user?.activeLocationId)).map(loc => {
             const locInv = inventory.filter(i => i.locationId === loc.id);
             const locTotal = locInv.reduce((s, i) => s + i.quantity, 0);
             const locCritical = locInv.filter(i => i.quantity <= 0).length;
@@ -309,8 +311,8 @@ export default function Home() {
             return (
               <div
                 key={loc.id}
-                onClick={() => handleLocationClick(loc.id)}
-                className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                onClick={() => perms.canAccessAdmin && handleLocationClick(loc.id)}
+                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${perms.canAccessAdmin ? 'cursor-pointer' : ''} ${
                   isActive
                     ? 'bg-primary-50 border-primary-200'
                     : 'bg-slate-50 border-transparent hover:border-slate-200 hover:bg-slate-100'

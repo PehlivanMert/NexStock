@@ -12,6 +12,7 @@ export default function ScannerPage() {
   const products = useStore(state => state.products);
   const inventory = useStore(state => state.inventory);
   const locations = useStore(state => state.locations);
+  const user = useStore(state => state.user);
 
   const [exchangeRates, setExchangeRates] = useState(null);
   const isNameLong = scannedProduct?.name?.length > 20;
@@ -28,12 +29,25 @@ export default function ScannerPage() {
     setScannedData(barcode);
 
     if (product) {
-      const invRecords = inventory
-        .filter(inv => inv.productId === product.id)
-        .map(inv => ({
-          ...inv,
-          locationName: locations.find(l => l.id === inv.locationId)?.name || '-',
-        }));
+      let invRecords = inventory.filter(inv => inv.productId === product.id);
+
+      if (user?.activeLocationId !== 'all') {
+        invRecords = invRecords.filter(inv => inv.locationId === user?.activeLocationId);
+        if (invRecords.length === 0) {
+          invRecords = [{
+            id: 'dummy',
+            productId: product.id,
+            locationId: user.activeLocationId,
+            quantity: 0,
+            shelf: '-'
+          }];
+        }
+      }
+
+      invRecords = invRecords.map(inv => ({
+        ...inv,
+        locationName: locations.find(l => l.id === inv.locationId)?.name || '-',
+      }));
       setScannedProduct({ ...product, invRecords });
     } else {
       setScannedProduct(null);
