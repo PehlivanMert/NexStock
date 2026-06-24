@@ -181,6 +181,15 @@ export const useStore = create(
         await logActivity({ action: 'ADD_PRODUCT', userId: u?.uid, userName: u?.name, userRole: u?.role, details: { productName: product.name, sku: product.sku, quantity, locationId } });
       },
 
+      updateProduct: async (productId, updates) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
+        const products = get().products.map(p => p.id === productId ? { ...p, ...updates } : p);
+        set({ products });
+        await saveProducts(products);
+        const u = get().user;
+        await logActivity({ action: 'EDIT_PRODUCT', userId: u?.uid, userName: u?.name, userRole: u?.role, details: { productId, updates } });
+      },
+
       deleteProduct: async (invId) => {
         if (!get().dataLoaded) throw new Error("Data not loaded yet");
         const item = get().inventory.find(i => i.id === invId);

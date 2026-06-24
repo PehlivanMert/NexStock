@@ -11,6 +11,7 @@ export default function Inventory() {
   const locations = useStore(state => state.locations);
   const deleteProduct = useStore(state => state.deleteProduct);
   const updateInventoryItem = useStore(state => state.updateInventoryItem);
+  const updateProduct = useStore(state => state.updateProduct);
 
   const perms = ROLE_PERMISSIONS[user?.role] || {};
 
@@ -153,7 +154,15 @@ export default function Inventory() {
     setSelectedProduct(item);
     setEditing(false);
     setConfirmDelete(false);
-    setEditForm({ quantity: item.quantity, shelf: item.shelf, locationId: item.locationId });
+    setEditForm({ 
+      quantity: item.quantity, 
+      shelf: item.shelf, 
+      locationId: item.locationId,
+      productName: item.productName || '',
+      price: item.price || 0,
+      sku: item.sku || '',
+      barcode: item.barcode || ''
+    });
   };
 
   const handleSaveEdit = () => {
@@ -162,7 +171,15 @@ export default function Inventory() {
       shelf: editForm.shelf,
       locationId: editForm.locationId,
     });
-    toast.success('Stok güncellendi!');
+    
+    updateProduct(selectedProduct.productId, {
+      name: editForm.productName,
+      price: parseFloat(editForm.price) || 0,
+      sku: editForm.sku,
+      barcode: editForm.barcode
+    });
+    
+    toast.success('Ürün güncellendi!');
     setSelectedProduct(null);
     setEditing(false);
   };
@@ -545,6 +562,32 @@ export default function Inventory() {
                 </>
               ) : (
                 <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Ürün Adı</label>
+                    <input
+                      type="text" value={editForm.productName}
+                      onChange={e => setEditForm({ ...editForm, productName: e.target.value })}
+                      className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 outline-none bg-slate-50 font-bold"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Fiyat (TRY)</label>
+                      <input
+                        type="number" value={editForm.price}
+                        onChange={e => setEditForm({ ...editForm, price: e.target.value })}
+                        className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 outline-none bg-slate-50 font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Barkod</label>
+                      <input
+                        type="text" value={editForm.barcode}
+                        onChange={e => setEditForm({ ...editForm, barcode: e.target.value })}
+                        className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 outline-none bg-slate-50 font-mono text-sm"
+                      />
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Miktar</label>
