@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ScanBarcode, Save, MapPin, CheckCircle, Minus, Plus, ClipboardCheck, Search, Banknote, DollarSign, Euro, PoundSterling, X } from 'lucide-react';
-import { useStore } from '../store/useStore';
+import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 import BarcodeScanner from '../components/scanner/BarcodeScanner';
 import { toast } from 'sonner';
 
 export default function Count() {
+  const user = useStore(state => state.user);
+  const perms = ROLE_PERMISSIONS[user?.role] || {};
+
   const locations = useStore(state => state.locations);
   const products = useStore(state => state.products);
   const inventory = useStore(state => state.inventory);
@@ -301,13 +304,15 @@ export default function Count() {
         >
           <Save size={18} /> Rapor Kaydet
         </button>
-        <button
-          onClick={handleSyncInventory}
-          disabled={!selectedLocation || scannedCount === 0}
-          className="flex-1 py-3.5 bg-gradient-to-r from-slate-800 to-slate-900 text-white rounded-2xl font-bold shadow-md flex justify-center items-center gap-2 hover:from-slate-700 hover:to-slate-800 disabled:opacity-40 transition-all active:scale-98 text-sm"
-        >
-          <CheckCircle size={18} /> Stoku Güncelle
-        </button>
+        {perms.canAccessAdmin && (
+          <button
+            onClick={handleSyncInventory}
+            disabled={!selectedLocation || scannedCount === 0}
+            className="flex-1 py-3.5 bg-gradient-to-r from-slate-800 to-slate-900 text-white rounded-2xl font-bold shadow-md flex justify-center items-center gap-2 hover:from-slate-700 hover:to-slate-800 disabled:opacity-40 transition-all active:scale-98 text-sm"
+          >
+            <CheckCircle size={18} /> Stoku Güncelle
+          </button>
+        )}
       </div>
     </div>
   );

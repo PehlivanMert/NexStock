@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import BarcodeScanner from '../components/scanner/BarcodeScanner';
 import { useStore } from '../store/useStore';
 import { Package, ArrowRightLeft, ClipboardList, RotateCcw, X, CheckCircle2, AlertCircle, ChevronRight, Banknote, Euro, DollarSign, PoundSterling } from 'lucide-react';
@@ -14,8 +14,7 @@ export default function ScannerPage() {
   const locations = useStore(state => state.locations);
 
   const [exchangeRates, setExchangeRates] = useState(null);
-  const nameRef = useRef(null);
-  const [isNameLong, setIsNameLong] = useState(false);
+  const isNameLong = scannedProduct?.name?.length > 20;
 
   useEffect(() => {
     fetch('https://api.exchangerate-api.com/v4/latest/TRY')
@@ -23,12 +22,6 @@ export default function ScannerPage() {
       .then(data => setExchangeRates(data.rates))
       .catch(console.error);
   }, []);
-
-  useEffect(() => {
-    if (scannedProduct && nameRef.current) {
-      setIsNameLong(nameRef.current.scrollWidth > nameRef.current.clientWidth);
-    }
-  }, [scannedProduct]);
 
   const handleScan = (barcode) => {
     const product = products.find(p => p.barcode === barcode || p.sku === barcode || p.id === barcode);
@@ -86,7 +79,7 @@ export default function ScannerPage() {
               {scannedProduct ? (
                 <div className="overflow-hidden">
                   <div className="text-xs text-green-400 font-bold mb-0.5">✓ Ürün Bulundu</div>
-                  <div className="overflow-hidden relative w-full h-8" ref={nameRef}>
+                  <div className="overflow-hidden relative w-full h-8">
                     {isNameLong ? (
                       <div className="absolute whitespace-nowrap animate-marquee flex gap-8">
                         <h1 className="text-xl font-black text-white leading-tight">{scannedProduct.name}</h1>
