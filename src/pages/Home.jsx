@@ -89,6 +89,14 @@ export default function Home() {
     },
   ];
 
+  // Lokasyonlar kartı için görünür lokasyonlar
+  const visibleLocations = locations.filter(l =>
+    l.status === 'active' &&
+    (perms.canAccessAdmin || user?.activeLocationId === 'all' || l.id === user?.activeLocationId)
+  );
+  const showAllRow = perms.canAccessAdmin || user?.activeLocationId === 'all';
+  const showLocationsCard = showAllRow || visibleLocations.length > 0;
+
   return (
     <div className="px-4 pt-4 pb-32 space-y-5 max-w-lg mx-auto">
 
@@ -253,96 +261,98 @@ export default function Home() {
       </div>
 
       {/* ── Locations Summary ────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-100/80 card-shadow p-4 animate-fade-in-up delay-300">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <MapPin size={16} className="text-blue-500" />
-            <h2 className="text-sm font-bold text-slate-800">Lokasyonlar</h2>
-          </div>
-          {perms.canManageLocations && (
-            <button
-              onClick={() => navigate('/admin/locations')}
-              className="flex items-center gap-1 text-xs text-primary-600 font-semibold bg-primary-50 px-2.5 py-1 rounded-lg hover:bg-primary-100 transition-colors"
-            >
-              Yönet <ChevronRight size={13} />
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          {(!perms.canAccessAdmin && user?.activeLocationId !== 'all') ? null : (
-            <div
-              onClick={() => perms.canAccessAdmin && handleLocationClick('all')}
-              className={`flex items-center justify-between p-3 rounded-xl border transition-all ${perms.canAccessAdmin ? 'cursor-pointer' : ''} ${
-                user?.activeLocationId === 'all'
-                  ? 'bg-primary-50 border-primary-200'
-                  : 'bg-slate-50 border-transparent hover:border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-            <div className="flex items-center gap-2.5">
-              <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold ${
-                user?.activeLocationId === 'all' ? 'bg-primary-600 text-white shadow-md shadow-primary-400/30' : 'bg-white text-slate-600 border border-slate-200'
-              }`}>
-                <Layers size={16} />
-              </div>
-              <div>
-                <p className={`text-sm font-bold leading-none ${user?.activeLocationId === 'all' ? 'text-primary-700' : 'text-slate-700'}`}>Tüm Lokasyonlar</p>
-                <p className="text-[10px] text-slate-400 mt-0.5 capitalize">Genel Bakış</p>
-              </div>
+      {showLocationsCard && (
+        <div className="bg-white rounded-2xl border border-slate-100/80 card-shadow p-4 animate-fade-in-up delay-300">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <MapPin size={16} className="text-blue-500" />
+              <h2 className="text-sm font-bold text-slate-800">Lokasyonlar</h2>
             </div>
-            <div className="flex items-center gap-2 text-right">
-              <div>
-                <p className="text-sm font-extrabold text-slate-700">{inventory.reduce((s, i) => s + i.quantity, 0).toLocaleString('tr-TR')}</p>
-                <p className="text-[10px] text-slate-400">toplam adet</p>
-              </div>
-              {inventory.filter(i => i.quantity <= 0).length > 0 && (
-                <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-1 rounded-lg font-black">{inventory.filter(i => i.quantity <= 0).length} ⚠</span>
-              )}
-            </div>
+            {perms.canManageLocations && (
+              <button
+                onClick={() => navigate('/admin/locations')}
+                className="flex items-center gap-1 text-xs text-primary-600 font-semibold bg-primary-50 px-2.5 py-1 rounded-lg hover:bg-primary-100 transition-colors"
+              >
+                Yönet <ChevronRight size={13} />
+              </button>
+            )}
           </div>
-          )}
 
-          {locations.filter(l => l.status === 'active' && (perms.canAccessAdmin || user?.activeLocationId === 'all' || l.id === user?.activeLocationId)).map(loc => {
-            const locInv = inventory.filter(i => i.locationId === loc.id);
-            const locTotal = locInv.reduce((s, i) => s + i.quantity, 0);
-            const locCritical = locInv.filter(i => i.quantity <= 0).length;
-            const isActive = loc.id === user?.activeLocationId;
-
-            return (
+          <div className="space-y-2">
+            {showAllRow && (
               <div
-                key={loc.id}
-                onClick={() => perms.canAccessAdmin && handleLocationClick(loc.id)}
+                onClick={() => perms.canAccessAdmin && handleLocationClick('all')}
                 className={`flex items-center justify-between p-3 rounded-xl border transition-all ${perms.canAccessAdmin ? 'cursor-pointer' : ''} ${
-                  isActive
+                  user?.activeLocationId === 'all'
                     ? 'bg-primary-50 border-primary-200'
                     : 'bg-slate-50 border-transparent hover:border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
                   <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold ${
-                    isActive ? 'bg-primary-600 text-white shadow-md shadow-primary-400/30' : 'bg-white text-slate-600 border border-slate-200'
+                    user?.activeLocationId === 'all' ? 'bg-primary-600 text-white shadow-md shadow-primary-400/30' : 'bg-white text-slate-600 border border-slate-200'
                   }`}>
-                    {loc.name.charAt(0).toUpperCase()}
+                    <Layers size={16} />
                   </div>
                   <div>
-                    <p className={`text-sm font-bold leading-none ${isActive ? 'text-primary-700' : 'text-slate-700'}`}>{loc.name}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5 capitalize">{loc.type === 'warehouse' ? '📦 Depo' : '🏪 Mağaza'}</p>
+                    <p className={`text-sm font-bold leading-none ${user?.activeLocationId === 'all' ? 'text-primary-700' : 'text-slate-700'}`}>Tüm Lokasyonlar</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 capitalize">Genel Bakış</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-right">
                   <div>
-                    <p className="text-sm font-extrabold text-slate-700">{locTotal.toLocaleString('tr-TR')}</p>
-                    <p className="text-[10px] text-slate-400">adet</p>
+                    <p className="text-sm font-extrabold text-slate-700">{inventory.reduce((s, i) => s + i.quantity, 0).toLocaleString('tr-TR')}</p>
+                    <p className="text-[10px] text-slate-400">toplam adet</p>
                   </div>
-                  {locCritical > 0 && (
-                    <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-1 rounded-lg font-black">{locCritical} ⚠</span>
+                  {inventory.filter(i => i.quantity <= 0).length > 0 && (
+                    <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-1 rounded-lg font-black">{inventory.filter(i => i.quantity <= 0).length} ⚠</span>
                   )}
                 </div>
               </div>
-            );
-          })}
+            )}
+
+            {visibleLocations.map(loc => {
+              const locInv = inventory.filter(i => i.locationId === loc.id);
+              const locTotal = locInv.reduce((s, i) => s + i.quantity, 0);
+              const locCritical = locInv.filter(i => i.quantity <= 0).length;
+              const isActive = loc.id === user?.activeLocationId;
+
+              return (
+                <div
+                  key={loc.id}
+                  onClick={() => perms.canAccessAdmin && handleLocationClick(loc.id)}
+                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${perms.canAccessAdmin ? 'cursor-pointer' : ''} ${
+                    isActive
+                      ? 'bg-primary-50 border-primary-200'
+                      : 'bg-slate-50 border-transparent hover:border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-xs font-bold ${
+                      isActive ? 'bg-primary-600 text-white shadow-md shadow-primary-400/30' : 'bg-white text-slate-600 border border-slate-200'
+                    }`}>
+                      {loc.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-bold leading-none ${isActive ? 'text-primary-700' : 'text-slate-700'}`}>{loc.name}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5 capitalize">{loc.type === 'warehouse' ? '📦 Depo' : '🏪 Mağaza'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-right">
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-700">{locTotal.toLocaleString('tr-TR')}</p>
+                      <p className="text-[10px] text-slate-400">adet</p>
+                    </div>
+                    {locCritical > 0 && (
+                      <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-1 rounded-lg font-black">{locCritical} ⚠</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

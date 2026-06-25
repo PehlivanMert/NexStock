@@ -183,11 +183,12 @@ export default function BarcodeScanner({ onScan, onClose }) {
           ]}
           constraints={{
             facingMode: { ideal: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            // Android düşük kaliteli kameralar için makul çözünürlük (1920x1080 timeout yapabilir)
+            width: { min: 640, ideal: 1280, max: 1920 },
+            height: { min: 480, ideal: 720, max: 1080 },
           }}
           allowMultiple={true}
-          scanDelay={600}
+          scanDelay={400}
           styles={{
             container: { width: '100%', height: '100%', position: 'absolute', inset: 0 },
             video: { objectFit: 'cover', width: '100%', height: '100%' },

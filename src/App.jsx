@@ -46,19 +46,22 @@ function App() {
   const loadFromFirestore = useStore(state => state.loadFromFirestore);
 
   useEffect(() => {
-    // Firebase Auth state listener - if user signs out from another tab or token expires
+    let hydrating = false; // çift yüklemeyi önle
+
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (!firebaseUser && isLoggedIn) {
-        // Firebase session ended externally
+        // Firebase session dışarıdan sona erdi
         logout();
-      } else if (firebaseUser && isLoggedIn && !dataLoaded) {
-        // Hydrate data if app is reloaded and user is already logged in
+      } else if (firebaseUser && isLoggedIn && !dataLoaded && !hydrating) {
+        // Uygulama yeniden yüklendi ve veri eksik — tek seferlik yükle
+        hydrating = true;
         loadFromFirestore().catch(console.error);
       }
     });
 
-    // Hydrate immediately if auth state is already known but data is missing
-    if (isLoggedIn && !dataLoaded && auth.currentUser) {
+    // onAuthStateChanged henüz tetiklenmediyse acil fallback (auth.currentUser zaten biliniyor)
+    if (isLoggedIn && !dataLoaded && auth.currentUser && !hydrating) {
+      hydrating = true;
       loadFromFirestore().catch(console.error);
     }
 

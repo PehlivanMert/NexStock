@@ -24,7 +24,7 @@ const roleConfig = {
 
 const emptyForm = {
   name: '', email: '', password: '',
-  role: 'staff', location: '', status: 'Aktif', phone: '',
+  role: 'staff', locationId: '', location: '', status: 'Aktif', phone: '',
 };
 
 export default function Users() {
@@ -61,16 +61,22 @@ export default function Users() {
   // ── Form aç/kapat ────────────────────────────────────────────
   const openAdd = () => {
     setEditingUser(null);
-    setFormData({ ...emptyForm, location: locations[0]?.name || '' });
+    const firstLoc = locations.find(l => l.status === 'active') || locations[0];
+    setFormData({ ...emptyForm, locationId: firstLoc?.id || '', location: firstLoc?.name || '' });
     setShowPass(false);
     setShowForm(true);
   };
 
   const openEdit = (user) => {
     setEditingUser(user);
+    // activeLocationId'yi ID'den bul, yoksa lokasyon listesinden isim eşleştir
+    const existingLocId = user.activeLocationId ||
+      (user.location === 'Tüm Lokasyonlar' ? 'all' :
+        locations.find(l => l.name === user.location)?.id || '');
     setFormData({
       name: user.name || '', email: user.email || '',
       password: '', role: user.role || 'staff',
+      locationId: existingLocId,
       location: user.location || '', status: user.status || 'Aktif',
       phone: user.phone || '',
     });
@@ -96,9 +102,17 @@ export default function Users() {
     setSaving(true);
     try {
       // ── Düzenle ──
+      // activeLocationId: admin/manager için 'all', staff için lokasyon ID'si
+      const isPrivileged = formData.role === 'admin' || formData.role === 'manager';
+      const resolvedActiveLocationId = isPrivileged
+        ? 'all'
+        : (formData.locationId || locations.find(l => l.name === formData.location)?.id || '');
+
       const updates = {
         name: formData.name, role: formData.role,
-        location: formData.location, status: formData.status, phone: formData.phone,
+        location: formData.location,
+        activeLocationId: resolvedActiveLocationId,
+        status: formData.status, phone: formData.phone,
       };
       await updateUserProfile(editingUser.uid, updates);
 
@@ -127,9 +141,17 @@ export default function Users() {
     setSaving(true);
     try {
       const adminEmail = currentUser?.email;
+      // activeLocationId: admin/manager için 'all', staff için seçilen lokasyon ID'si
+      const isPrivileged = formData.role === 'admin' || formData.role === 'manager';
+      const resolvedActiveLocationId = isPrivileged
+        ? 'all'
+        : (formData.locationId || locations.find(l => l.name === formData.location)?.id || '');
+
       const profileData = {
         name: formData.name, email: formData.email, role: formData.role,
-        location: formData.location, status: formData.status, phone: formData.phone,
+        location: formData.location,
+        activeLocationId: resolvedActiveLocationId,
+        status: formData.status, phone: formData.phone,
         notifications: { lowStock: true, transfer: true, count: false },
         createdAt: new Date().toISOString(),
       };
@@ -342,10 +364,21 @@ export default function Users() {
 
               {/* Lokasyon */}
               <Field label="Sorumlu Lokasyon">
-                <select value={formData.location} onChange={e => setFormData(p => ({ ...p, location: e.target.value }))}
-                  className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm">
-                  <option value="Tüm Lokasyonlar">Tüm Lokasyonlar</option>
-                  {locations.map(loc => <option key={loc.id} value={loc.name}>{loc.name}</option>)}
+                <select
+                  value={formData.locationId}
+                  onChange={e => {
+                    const selectedId = e.target.value;
+                    const selectedLoc = locations.find(l => l.id === selectedId);
+                    setFormData(p => ({
+                      ...p,
+                      locationId: selectedId,
+                      location: selectedId === 'all' ? 'Tüm Lokasyonlar' : (selectedLoc?.name || ''),
+                    }));
+                  }}
+                  className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
+                >
+                  <option value="all">Tüm Lokasyonlar (Admin/Müdür)</option>
+                  {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
                 </select>
               </Field>
 

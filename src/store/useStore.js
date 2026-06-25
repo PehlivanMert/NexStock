@@ -100,7 +100,11 @@ export const useStore = create(
       // Load all data from Firestore (called once after login)
       loadFromFirestore: async () => {
         try {
-          const [appDataResult, transfersResult, countsResult, usersResult] = await Promise.all([
+          const state = get();
+          const isPrivileged = state.user?.role === 'admin' || state.user?.role === 'manager';
+
+          // Personel için kullanıcı listesi gerekmez — sorguyu atla (hız kazancı)
+          const promises = [
             loadAppData().catch(err => {
               console.error('Failed to load appData:', err);
               return { products: [], inventory: [], locations: [] };
@@ -113,21 +117,46 @@ export const useStore = create(
               console.error('Failed to load count logs:', err);
               return [];
             }),
-            loadAllUsers().catch(err => {
-              console.error('Failed to load users:', err);
-              return [];
-            })
-          ]);
+          ];
+
+          if (isPrivileged) {
+            promises.push(
+              loadAllUsers().catch(err => {
+                console.error('Failed to load users:', err);
+                return [];
+              })
+            );
+          }
+
+          const results = await Promise.all(promises);
+          const [appDataResult, transfersResult, countsResult, usersResult] = results;
+
+          const loadedLocations = appDataResult.locations || [];
 
           set({
             products: appDataResult.products || [],
             inventory: appDataResult.inventory || [],
-            locations: appDataResult.locations || [],
+            locations: loadedLocations,
             transferLog: transfersResult || [],
             countLogs: countsResult || [],
             users: usersResult || [],
             dataLoaded: true,
           });
+
+          // Mevcut kullanıcılarda activeLocationId eksik olabilir (eski hesaplar)
+          // Lokasyonlar yüklendikten sonra hesapla ve düzelt
+          const currentUser = get().user;
+          if (currentUser && !currentUser.activeLocationId) {
+            const isPrivilegedUser = currentUser.role === 'admin' || currentUser.role === 'manager';
+            if (isPrivilegedUser) {
+              set(state => ({ user: { ...state.user, activeLocationId: 'all' } }));
+            } else if (currentUser.location) {
+              const matchedLoc = loadedLocations.find(l => l.name === currentUser.location);
+              if (matchedLoc) {
+                set(state => ({ user: { ...state.user, activeLocationId: matchedLoc.id } }));
+              }
+            }
+          }
         } catch (e) {
           console.error('Firestore load error:', e);
           set({ dataLoaded: true }); // continue even if load fails
