@@ -30,42 +30,92 @@ export default function BarcodeScanner({ onScan, onClose }) {
     } catch (e) { /* silent */ }
   };
 
+  // ── Stream yakalama: kamera açılır açılmaz polling ile al ──────────────────
+  // Android'de 1500ms yetmeyebilir; 50ms aralıkla max 8 saniye bekle
   useEffect(() => {
-    setScanning(true);
-    return () => setScanning(false);
-  }, [setScanning]);
+    let attempts = 0;
+    const maxAttempts = 160; // 50ms × 160 = 8 saniye
+    const poll = setInterval(() => {
+      attempts++;
+      const videoEl = document.querySelector('video');
+      if (videoEl?.srcObject) {
+        const stream = videoEl.srcObject;
+        streamRef.current = stream;
+        const track = stream.getVideoTracks()[0];
+        if (track) {
+          // getCapabilities bazı Android tarayıcılarda yok ya da torch raporlamıyor
+          const caps = track.getCapabilities?.();
+          if (caps) {
+            setTorchSupported(!!caps.torch);
+          } else {
+            // Capabilities bilinmiyor — butonu göster, denemek zarar vermez
+            setTorchSupported(null);
+          }
+        }
+        clearInterval(poll);
+      } else if (attempts >= maxAttempts) {
+        clearInterval(poll);
+      }
+    }, 50);
+    return () => clearInterval(poll);
+  }, []);
 
-  // ── Torch control via MediaStreamTrack.applyConstraints ──────────────────
+  // ── Torch control: Android + iOS uyumlu iki aşamalı yaklaşım ────────────
   const applyTorch = useCallback(async (enabled) => {
     try {
-      // Find the active video stream from any video element on the page
+      // Aşama 1: mevcut track üzerinde applyConstraints dene (iOS Safari + yeni Android)
       const videoEl = document.querySelector('video');
-      if (!videoEl || !videoEl.srcObject) {
-        // Fall back to enumerating streams
-        const stream = streamRef.current;
-        if (!stream) return;
+      const stream = videoEl?.srcObject || streamRef.current;
+      if (stream) {
         const track = stream.getVideoTracks()[0];
-        if (!track) return;
-        const caps = track.getCapabilities?.();
-        if (!caps?.torch) { setTorchSupported(false); return; }
-        await track.applyConstraints({ advanced: [{ torch: enabled }] });
-        setTorchSupported(true);
-        return;
+        if (track) {
+          const caps = track.getCapabilities?.();
+          // caps.torch yoksa bile dene — bazı Android'ler capabilities raporlamıyor
+          if (!caps || caps.torch !== false) {
+            try {
+              await track.applyConstraints({ advanced: [{ torch: enabled }] });
+              setTorchSupported(true);
+              return;
+            } catch (e) {
+              console.warn('applyConstraints torch failed, trying getUserMedia fallback:', e);
+            }
+          } else {
+            // Kesinlikle desteklenmiyor
+            setTorchSupported(false);
+            return;
+          }
+        }
       }
 
-      const stream = videoEl.srcObject;
-      streamRef.current = stream;
-      const track = stream.getVideoTracks()[0];
-      if (!track) return;
-
-      const caps = track.getCapabilities?.();
-      if (!caps?.torch) {
-        setTorchSupported(false);
-        return;
+      // Aşama 2: Android fallback — mevcut stream'i kapat, torch:true ile yeniden aç
+      // (bazı eski Android kameralar sadece bu yolu destekliyor)
+      if (enabled) {
+        try {
+          const newStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: 'environment' },
+              advanced: [{ torch: true }],
+            },
+          });
+          // Yeni stream'i video elementine bağla
+          if (videoEl) {
+            videoEl.srcObject = newStream;
+            streamRef.current = newStream;
+          }
+          setTorchSupported(true);
+        } catch (e2) {
+          console.warn('getUserMedia torch fallback failed:', e2);
+          setTorchSupported(false);
+        }
+      } else {
+        // Torch kapatmak için normal akışa dön
+        if (stream) {
+          const track = stream.getVideoTracks()[0];
+          if (track) {
+            try { await track.applyConstraints({ advanced: [{ torch: false }] }); } catch (_) {}
+          }
+        }
       }
-
-      await track.applyConstraints({ advanced: [{ torch: enabled }] });
-      setTorchSupported(true);
     } catch (err) {
       console.warn('Torch error:', err);
       setTorchSupported(false);
@@ -78,52 +128,34 @@ export default function BarcodeScanner({ onScan, onClose }) {
     await applyTorch(newValue);
   }, [torchOn, applyTorch]);
 
-  // Turn off torch when component unmounts
+  // Unmount'ta torch'u kapat
   useEffect(() => {
     return () => {
       if (torchOn) applyTorch(false);
     };
   }, [torchOn, applyTorch]);
 
+  // setScanning lifecycle
+  useEffect(() => {
+    setScanning(true);
+    return () => setScanning(false);
+  }, [setScanning]);
+
   const handleScan = (detectedCodes) => {
     if (!detectedCodes || detectedCodes.length === 0) return;
-
     const now = Date.now();
     if (now - lastScanTime.current < 800) return;
     lastScanTime.current = now;
-
     const decodedText = detectedCodes[0].rawValue;
     if (!decodedText) return;
-
     if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
     playBeep();
     setScanState('success');
     setLastScanned(decodedText);
     setScanCount(c => c + 1);
-
     onScan(decodedText);
-
-    setTimeout(() => {
-      setScanState('scanning');
-    }, 1000);
+    setTimeout(() => setScanState('scanning'), 1000);
   };
-
-  // Capture the stream reference when the video element is added to the DOM
-  const handleVideoRef = useCallback(() => {
-    setTimeout(() => {
-      const videoEl = document.querySelector('video');
-      if (videoEl?.srcObject) {
-        streamRef.current = videoEl.srcObject;
-        const track = videoEl.srcObject.getVideoTracks()[0];
-        const caps = track?.getCapabilities?.();
-        setTorchSupported(!!caps?.torch);
-      }
-    }, 1500); // wait for camera to initialize
-  }, []);
-
-  useEffect(() => {
-    handleVideoRef();
-  }, [handleVideoRef]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
