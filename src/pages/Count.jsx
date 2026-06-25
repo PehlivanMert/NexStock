@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ScanBarcode, Save, MapPin, CheckCircle, Minus, Plus, ClipboardCheck, Search, Banknote, DollarSign, Euro, PoundSterling, X } from 'lucide-react';
+import { ScanBarcode, Save, MapPin, CheckCircle, Minus, Plus, ClipboardCheck, Search } from 'lucide-react';
 import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 import BarcodeScanner from '../components/scanner/BarcodeScanner';
 import { toast } from 'sonner';
-import { useExchangeRates } from '../hooks/useExchangeRates';
 
 export default function Count() {
   const user = useStore(state => state.user);
@@ -19,11 +18,8 @@ export default function Count() {
   const [countingData, setCountingData] = useState([]);
   const [isScanning, setIsScanning] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterMode, setFilterMode] = useState('all');
-  const [lastScannedProduct, setLastScannedProduct] = useState(null);
+  const [filterMode, setFilterMode] = useState('scanned');
   const [confirmSync, setConfirmSync] = useState(false);
-
-  const { convert } = useExchangeRates();
 
   // Personel için kullanılabilir lokasyonlar
   const isPrivileged = perms.canAccessAdmin || user?.activeLocationId === 'all';
@@ -94,10 +90,8 @@ export default function Count() {
         item.productId === product.id ? { ...item, counted: item.counted + 1 } : item
       ));
       toast.success(`${product.name} — Toplam: ${inList.counted + 1}`, { duration: 1500 });
-      setLastScannedProduct({ ...product, count: inList.counted + 1 });
     } else {
       toast.error('Bu ürün mevcut lokasyona ait değil.');
-      setLastScannedProduct({ ...product, count: 0 });
     }
   };
 
@@ -110,52 +104,6 @@ export default function Count() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 relative">
-      {/* Price Display Widget */}
-      {lastScannedProduct && (
-        <div className="absolute top-4 left-4 right-4 z-50 bg-white/80 backdrop-blur-xl border border-white/40 shadow-2xl rounded-3xl p-5 animate-fade-in-down overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-emerald-600"></div>
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="font-extrabold text-slate-800 text-lg leading-tight line-clamp-1">{lastScannedProduct.name}</h3>
-              <p className="text-slate-500 text-xs font-mono mt-1 flex items-center gap-2">
-                <span>{lastScannedProduct.barcode}</span>
-                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                <span>{lastScannedProduct.sku}</span>
-              </p>
-            </div>
-            <button onClick={() => setLastScannedProduct(null)} className="p-1.5 bg-slate-100/80 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-full transition-colors shrink-0">
-              <X size={16} />
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden">
-              <Banknote size={32} className="text-emerald-500/10 absolute -right-2 -bottom-2" />
-              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">TRY</span>
-              <span className="text-lg font-black text-emerald-700">₺{(lastScannedProduct.price || 0).toLocaleString('tr-TR')}</span>
-            </div>
-            
-            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden">
-              <Euro size={32} className="text-blue-500/10 absolute -right-2 -bottom-2" />
-              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">EUR</span>
-              <span className="text-lg font-black text-blue-700">€{convert(lastScannedProduct.price, 'EUR')}</span>
-            </div>
-            
-            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden">
-              <DollarSign size={32} className="text-indigo-500/10 absolute -right-2 -bottom-2" />
-              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1">USD</span>
-              <span className="text-lg font-black text-indigo-700">${convert(lastScannedProduct.price, 'USD')}</span>
-            </div>
-            
-            <div className="bg-purple-50 border border-purple-100 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden">
-              <PoundSterling size={32} className="text-purple-500/10 absolute -right-2 -bottom-2" />
-              <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-1">GBP</span>
-              <span className="text-lg font-black text-purple-700">£{convert(lastScannedProduct.price, 'GBP')}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="bg-white px-4 pt-4 pb-3 border-b border-slate-100 shrink-0">
         <h1 className="text-xl font-extrabold text-slate-800 tracking-tight mb-3">Depo Sayımı</h1>

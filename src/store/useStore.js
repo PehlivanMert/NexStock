@@ -37,7 +37,7 @@ export const ROLE_PERMISSIONS = {
     canViewReports: false,
     canDeleteInventory: false,
     canImport: false,
-    canTransfer: true,
+    canTransfer: false,
     canCount: true,
   },
 };
