@@ -24,7 +24,7 @@ const roleConfig = {
 
 const emptyForm = {
   name: '', email: '', password: '',
-  role: 'staff', locationId: '', location: '', status: 'Aktif', phone: '',
+  role: 'staff', locationId: '', location: '', locationIds: [], status: 'Aktif', phone: '',
 };
 
 export default function Users() {
@@ -77,6 +77,7 @@ export default function Users() {
       name: user.name || '', email: user.email || '',
       password: '', role: user.role || 'staff',
       locationId: existingLocId,
+      locationIds: user.locationIds || (existingLocId && existingLocId !== 'all' ? [existingLocId] : []),
       location: user.location || '', status: user.status || 'Aktif',
       phone: user.phone || '',
     });
@@ -102,16 +103,17 @@ export default function Users() {
     setSaving(true);
     try {
       // ── Düzenle ──
-      // activeLocationId: admin/manager için 'all', staff için lokasyon ID'si
+      // activeLocationId: admin/manager için 'all', staff için lokasyon ID'si (ilk seçilen)
       const isPrivileged = formData.role === 'admin' || formData.role === 'manager';
       const resolvedActiveLocationId = isPrivileged
         ? 'all'
-        : (formData.locationId || locations.find(l => l.name === formData.location)?.id || '');
+        : (formData.locationIds?.length > 0 ? formData.locationIds[0] : (formData.locationId || locations.find(l => l.name === formData.location)?.id || ''));
 
       const updates = {
         name: formData.name, role: formData.role,
-        location: formData.location,
+        location: isPrivileged ? 'Tüm Lokasyonlar' : formData.location,
         activeLocationId: resolvedActiveLocationId,
+        locationIds: isPrivileged ? locations.map(l => l.id) : (formData.locationIds || []),
         status: formData.status, phone: formData.phone,
       };
       await updateUserProfile(editingUser.uid, updates);
@@ -145,12 +147,13 @@ export default function Users() {
       const isPrivileged = formData.role === 'admin' || formData.role === 'manager';
       const resolvedActiveLocationId = isPrivileged
         ? 'all'
-        : (formData.locationId || locations.find(l => l.name === formData.location)?.id || '');
+        : (formData.locationIds?.length > 0 ? formData.locationIds[0] : (formData.locationId || locations.find(l => l.name === formData.location)?.id || ''));
 
       const profileData = {
         name: formData.name, email: formData.email, role: formData.role,
-        location: formData.location,
+        location: isPrivileged ? 'Tüm Lokasyonlar' : formData.location,
         activeLocationId: resolvedActiveLocationId,
+        locationIds: isPrivileged ? locations.map(l => l.id) : (formData.locationIds || []),
         status: formData.status, phone: formData.phone,
         notifications: { lowStock: true, transfer: true, count: false },
         createdAt: new Date().toISOString(),
@@ -363,23 +366,43 @@ export default function Users() {
               </div>
 
               {/* Lokasyon */}
-              <Field label="Sorumlu Lokasyon">
-                <select
-                  value={formData.locationId}
-                  onChange={e => {
-                    const selectedId = e.target.value;
-                    const selectedLoc = locations.find(l => l.id === selectedId);
-                    setFormData(p => ({
-                      ...p,
-                      locationId: selectedId,
-                      location: selectedId === 'all' ? 'Tüm Lokasyonlar' : (selectedLoc?.name || ''),
-                    }));
-                  }}
-                  className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
-                >
-                  <option value="all">Tüm Lokasyonlar (Admin/Müdür)</option>
-                  {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
-                </select>
+              <Field label="Sorumlu Lokasyonlar">
+                {formData.role === 'admin' || formData.role === 'manager' ? (
+                  <div className="w-full p-3 border border-slate-200 rounded-xl bg-slate-100 text-sm text-slate-500">
+                    Tüm Lokasyonlar (Admin/Müdür)
+                  </div>
+                ) : (
+                  <div className="space-y-2 border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto bg-slate-50">
+                    {locations.map(loc => (
+                      <label key={loc.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded-lg transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={(formData.locationIds || []).includes(loc.id)}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setFormData(p => {
+                              const ids = p.locationIds || [];
+                              const newIds = checked ? [...ids, loc.id] : ids.filter(id => id !== loc.id);
+                              // Virgül ile ayrılmış isimler listesi (eski verilerle uyum için)
+                              const newLocationNames = newIds.map(id => locations.find(l => l.id === id)?.name).filter(Boolean).join(', ');
+                              return { 
+                                ...p, 
+                                locationIds: newIds, 
+                                locationId: newIds[0] || '', 
+                                location: newLocationNames || '' 
+                              };
+                            });
+                          }}
+                          className="w-4 h-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-slate-700">{loc.name}</span>
+                      </label>
+                    ))}
+                    {locations.length === 0 && (
+                      <span className="text-sm text-slate-400">Hiç lokasyon bulunamadı.</span>
+                    )}
+                  </div>
+                )}
               </Field>
 
               {/* Telefon */}

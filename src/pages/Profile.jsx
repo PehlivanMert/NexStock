@@ -267,8 +267,19 @@ export default function Profile() {
                     <option key={loc.id} value={loc.id}>{loc.name}</option>
                   ))}
                 </select>
+              ) : (user?.locationIds && user.locationIds.length > 1) ? (
+                // Personelin birden çok lokasyonu varsa, atanmış lokasyonları arasında seçim yapabilir
+                <select
+                  value={accountForm.activeLocationId}
+                  onChange={e => setAccountForm({ ...accountForm, activeLocationId: e.target.value })}
+                  className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
+                >
+                  {locations.filter(l => l.status === 'active' && user.locationIds.includes(l.id)).map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
               ) : (
-                // Personel kendi lokasyonunu değiştiremez
+                // Personelin tek lokasyonu varsa (veya hiç yoksa) değiştiremez
                 <div className="w-full p-3.5 border border-slate-200 rounded-2xl bg-slate-100 text-slate-500 text-sm cursor-not-allowed">
                   {locations.find(l => l.id === user?.activeLocationId)?.name || 'Atanmamış'}
                 </div>

@@ -23,9 +23,13 @@ export default function Count() {
 
   // Personel için kullanılabilir lokasyonlar
   const isPrivileged = perms.canAccessAdmin || user?.activeLocationId === 'all';
+  const hasMultipleLocations = user?.locationIds?.length > 1;
+  
   const availableLocations = isPrivileged
     ? locations
-    : locations.filter(l => l.id === user?.activeLocationId);
+    : (hasMultipleLocations 
+        ? locations.filter(l => user.locationIds.includes(l.id))
+        : locations.filter(l => l.id === user?.activeLocationId));
 
   // Personel için lokasyonu otomatik seç
   useEffect(() => {
@@ -110,7 +114,7 @@ export default function Count() {
 
         <div className="flex items-center gap-2.5 bg-slate-50 rounded-2xl border border-slate-200 px-3.5 py-2.5">
           <MapPin size={16} className="text-slate-400 shrink-0" />
-          {isPrivileged ? (
+          {(isPrivileged || hasMultipleLocations) ? (
             <select
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
