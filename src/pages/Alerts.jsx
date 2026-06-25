@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Clock, TrendingDown, Bell, CheckCircle, ChevronRight, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 
 export default function Alerts() {
   const navigate = useNavigate();
@@ -9,6 +9,7 @@ export default function Alerts() {
   const inventory = useStore(state => state.inventory);
   const products = useStore(state => state.products);
   const transferLog = useStore(state => state.transferLog);
+  const perms = ROLE_PERMISSIONS[user?.role] || {};
 
   const dismissedAlerts = useStore(state => state.dismissedAlerts) || [];
   const setDismissedAlerts = useStore(state => state.setDismissedAlerts);
@@ -37,8 +38,9 @@ export default function Alerts() {
         desc: `${t.from} → ${t.to} · ${t.items?.length || 0} kalem`,
         time: new Date(t.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
         icon: Clock,
-        action: () => navigate('/admin/reports'),
-        actionLabel: 'Raporlara Git',
+        // canViewReports varsa raporlara, yoksa envantere yönlendir
+        action: perms.canViewReports ? () => navigate('/admin/reports') : () => navigate('/inventory'),
+        actionLabel: perms.canViewReports ? 'Raporlara Git' : 'Envantere Git',
       }));
 
     return [

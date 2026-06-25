@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowRightLeft, CheckCircle2, ChevronRight, MapPin, Package, X, Search } from 'lucide-react';
-import { useStore } from '../store/useStore';
+import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -13,19 +13,24 @@ export default function Transfer() {
   const inventory = useStore(state => state.inventory);
   const performTransfer = useStore(state => state.performTransfer);
 
+  const user = useStore(state => state.user);
   const [step, setStep] = useState(1);
   const [sourceLoc, setSourceLoc] = useState('');
   const [destLoc, setDestLoc] = useState('');
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Auto-select from Scanner
+  const isPrivileged = ROLE_PERMISSIONS[user?.role]?.canAccessAdmin || user?.activeLocationId === 'all';
+
+  // Personel için kaynak lokasyonu otomatik doldur
   useEffect(() => {
     if (location.state?.autoSourceLoc && location.state?.autoProduct) {
       setSourceLoc(location.state.autoSourceLoc);
       setStep(2);
+    } else if (!isPrivileged && user?.activeLocationId && user.activeLocationId !== 'all') {
+      setSourceLoc(user.activeLocationId);
     }
-  }, [location.state]);
+  }, [location.state, isPrivileged, user?.activeLocationId]);
 
   // Auto-select product after source location is set and step 2 is active
   useEffect(() => {
@@ -164,6 +169,8 @@ export default function Transfer() {
                   <div className="h-5 w-5 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-[10px] font-black">C</div>
                   Çıkış Deposu
                 </label>
+              {/* Personel için çıkış deposu otomatik */}
+              {isPrivileged ? (
                 <select
                   value={sourceLoc}
                   onChange={(e) => setSourceLoc(e.target.value)}
@@ -172,6 +179,11 @@ export default function Transfer() {
                   <option value="">Lokasyon seçin...</option>
                   {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
                 </select>
+              ) : (
+                <div className="w-full p-3.5 bg-slate-100 border border-slate-200 rounded-2xl text-sm text-slate-700 font-medium">
+                  {locations.find(l => l.id === sourceLoc)?.name || 'Lokasyon atanmamış'}
+                </div>
+              )}
               </div>
 
               <div>

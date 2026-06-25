@@ -139,8 +139,7 @@ export default function Profile() {
     {
       items: [
         { id: 'account', icon: Settings, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', label: 'Hesap Ayarları', sub: user?.email },
-        // Password change only for admin users
-        ...(isAdmin ? [{ id: 'password', icon: Lock, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', label: 'Şifre Değiştir', sub: 'Firebase Auth şifrenizi değiştirin' }] : []),
+        { id: 'password', icon: Lock, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', label: 'Şifre Değiştir', sub: 'Hesap şifrenizi güncelleyin' },
         { id: 'notifications', icon: Bell, iconBg: 'bg-purple-50', iconColor: 'text-purple-600', label: 'Bildirim Tercihleri', sub: 'Stok ve transfer bildirimleri' },
         { id: 'permissions', icon: Shield, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', label: 'Yetkiler', sub: `${roleName} yetki seviyesi` },
       ]
@@ -256,17 +255,24 @@ export default function Profile() {
               />
             </FormField>
             <FormField label="Aktif Lokasyon">
-              <select
-                value={accountForm.activeLocationId}
-                onChange={e => setAccountForm({ ...accountForm, activeLocationId: e.target.value })}
-                className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
-              >
-                <option value="">Seçiniz</option>
-                <option value="all">Tüm Lokasyonlar</option>
-                {locations.filter(l => l.status === 'active').map(loc => (
-                  <option key={loc.id} value={loc.id}>{loc.name}</option>
-                ))}
-              </select>
+              {(isAdmin || user?.role === 'manager') ? (
+                <select
+                  value={accountForm.activeLocationId}
+                  onChange={e => setAccountForm({ ...accountForm, activeLocationId: e.target.value })}
+                  className="w-full p-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500/20 outline-none bg-slate-50 text-sm"
+                >
+                  <option value="">Seçiniz</option>
+                  <option value="all">Tüm Lokasyonlar</option>
+                  {locations.filter(l => l.status === 'active').map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+              ) : (
+                // Personel kendi lokasyonunu değiştiremez
+                <div className="w-full p-3.5 border border-slate-200 rounded-2xl bg-slate-100 text-slate-500 text-sm cursor-not-allowed">
+                  {locations.find(l => l.id === user?.activeLocationId)?.name || 'Atanmamış'}
+                </div>
+              )}
             </FormField>
 
             <div className="flex gap-3 pt-1">
@@ -280,7 +286,7 @@ export default function Profile() {
       )}
 
       {/* ── Password Modal (Admin only) ───────────────────── */}
-      {activeModal === 'password' && isAdmin && (
+      {activeModal === 'password' && (
         <BottomSheet title="Şifre Değiştir" onClose={() => setActiveModal(null)}>
           <form onSubmit={handleChangePassword} className="space-y-4">
             <FormField label="Mevcut Şifre">

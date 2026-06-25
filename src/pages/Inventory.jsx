@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useExchangeRates } from '../hooks/useExchangeRates';
 
 export default function Inventory() {
   const user = useStore(state => state.user);
@@ -21,15 +22,9 @@ export default function Inventory() {
   const [editForm, setEditForm] = useState({});
   const [confirmDelete, setConfirmDelete] = useState(false);
   
-  const [exchangeRates, setExchangeRates] = useState(null);
   const [showCurrencies, setShowCurrencies] = useState(false);
 
-  useEffect(() => {
-    fetch('https://api.exchangerate-api.com/v4/latest/TRY')
-      .then(res => res.json())
-      .then(data => setExchangeRates(data.rates))
-      .catch(console.error);
-  }, []);
+  const { rates: exchangeRates, convert } = useExchangeRates();
   
   // Filtering & Sorting
   const [showFilters, setShowFilters] = useState(false);

@@ -3,6 +3,7 @@ import { ScanBarcode, Save, MapPin, CheckCircle, Minus, Plus, ClipboardCheck, Se
 import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 import BarcodeScanner from '../components/scanner/BarcodeScanner';
 import { toast } from 'sonner';
+import { useExchangeRates } from '../hooks/useExchangeRates';
 
 export default function Count() {
   const user = useStore(state => state.user);
@@ -18,20 +19,27 @@ export default function Count() {
   const [countingData, setCountingData] = useState([]);
   const [isScanning, setIsScanning] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterMode, setFilterMode] = useState('all'); // 'all', 'scanned', 'diff'
-  const [exchangeRates, setExchangeRates] = useState(null);
+  const [filterMode, setFilterMode] = useState('all');
   const [lastScannedProduct, setLastScannedProduct] = useState(null);
+  const [confirmSync, setConfirmSync] = useState(false);
 
+  const { convert } = useExchangeRates();
+
+  // Personel için kullanılabilir lokasyonlar
+  const isPrivileged = perms.canAccessAdmin || user?.activeLocationId === 'all';
+  const availableLocations = isPrivileged
+    ? locations
+    : locations.filter(l => l.id === user?.activeLocationId);
+
+  // Personel için lokasyonu otomatik seç
   useEffect(() => {
-    fetch('https://api.exchangerate-api.com/v4/latest/TRY')
-      .then(res => res.json())
-      .then(data => setExchangeRates(data.rates))
-      .catch(console.error);
-  }, []);
+    if (!isPrivileged && availableLocations.length === 1 && !selectedLocation) {
+      setSelectedLocation(availableLocations[0].id);
+    }
+  }, [isPrivileged, availableLocations, selectedLocation]);
 
   useEffect(() => {
     if (!selectedLocation) { setCountingData([]); return; }
-
     const locInventory = inventory.filter(inv => inv.locationId === selectedLocation);
     const mappedData = locInventory.map(inv => {
       const product = products.find(p => p.id === inv.productId);
@@ -62,11 +70,16 @@ export default function Count() {
   const handleSyncInventory = () => {
     const countedItems = countingData.filter(item => item.counted > 0);
     if (countedItems.length === 0) { toast.error('Senkronize edilecek okutulmuş ürün yok.'); return; }
-    if (!window.confirm('Okuttuğunuz değerler sistem stoklarının üzerine yazılacak. Onaylıyor musunuz?')) return;
+    setConfirmSync(true); // window.confirm yerine custom modal
+  };
+
+  const doSyncInventory = () => {
+    const countedItems = countingData.filter(item => item.counted > 0);
     countedItems.forEach(item => updateInventoryCount(selectedLocation, item.productId, item.counted));
     saveCountLog(selectedLocation, countedItems);
     toast.success('Stoklar başarıyla senkronize edildi!');
     setCountingData(prev => prev.map(item => ({ ...item, counted: 0 })));
+    setConfirmSync(false);
   };
 
   const handleScan = (barcode) => {
@@ -125,19 +138,19 @@ export default function Count() {
             <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden">
               <Euro size={32} className="text-blue-500/10 absolute -right-2 -bottom-2" />
               <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">EUR</span>
-              <span className="text-lg font-black text-blue-700">€{exchangeRates && lastScannedProduct.price ? (lastScannedProduct.price * exchangeRates.EUR).toFixed(2) : '—'}</span>
+              <span className="text-lg font-black text-blue-700">€{convert(lastScannedProduct.price, 'EUR')}</span>
             </div>
             
             <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden">
               <DollarSign size={32} className="text-indigo-500/10 absolute -right-2 -bottom-2" />
               <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1">USD</span>
-              <span className="text-lg font-black text-indigo-700">${exchangeRates && lastScannedProduct.price ? (lastScannedProduct.price * exchangeRates.USD).toFixed(2) : '—'}</span>
+              <span className="text-lg font-black text-indigo-700">${convert(lastScannedProduct.price, 'USD')}</span>
             </div>
             
             <div className="bg-purple-50 border border-purple-100 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden">
               <PoundSterling size={32} className="text-purple-500/10 absolute -right-2 -bottom-2" />
               <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-1">GBP</span>
-              <span className="text-lg font-black text-purple-700">£{exchangeRates && lastScannedProduct.price ? (lastScannedProduct.price * exchangeRates.GBP).toFixed(2) : '—'}</span>
+              <span className="text-lg font-black text-purple-700">£{convert(lastScannedProduct.price, 'GBP')}</span>
             </div>
           </div>
         </div>
@@ -149,16 +162,22 @@ export default function Count() {
 
         <div className="flex items-center gap-2.5 bg-slate-50 rounded-2xl border border-slate-200 px-3.5 py-2.5">
           <MapPin size={16} className="text-slate-400 shrink-0" />
-          <select
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-            className="flex-1 bg-transparent text-slate-700 text-sm font-medium outline-none"
-          >
-            <option value="">Lokasyon seçin...</option>
-            {locations.map(loc => (
-              <option key={loc.id} value={loc.id}>{loc.name}</option>
-            ))}
-          </select>
+          {isPrivileged ? (
+            <select
+              value={selectedLocation}
+              onChange={(e) => setSelectedLocation(e.target.value)}
+              className="flex-1 bg-transparent text-slate-700 text-sm font-medium outline-none"
+            >
+              <option value="">Lokasyon seçin...</option>
+              {availableLocations.map(loc => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="flex-1 text-slate-700 text-sm font-medium">
+              {availableLocations[0]?.name || 'Lokasyon atanmamış'}
+            </span>
+          )}
         </div>
 
         {/* Stats bar */}
@@ -314,6 +333,24 @@ export default function Count() {
           </button>
         )}
       </div>
+      {/* Sync Confirm Modal */}
+      {confirmSync && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-scale-in">
+            <div className="h-14 w-14 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <CheckCircle size={28} className="text-orange-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 text-center mb-2">Stokları Güncelle</h3>
+            <p className="text-sm text-slate-500 text-center mb-5">
+              Okuttuğunuz değerler sistem stoklarının üzerine yazılacak. Bu işlemi onaylıyor musunuz?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmSync(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl font-semibold">İptal</button>
+              <button onClick={doSyncInventory} className="flex-1 py-3 bg-orange-600 text-white rounded-xl font-bold">Evet, Güncelle</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

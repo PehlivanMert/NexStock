@@ -14,7 +14,7 @@ export default function AddProduct() {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '', sku: '', barcode: location.state?.barcode || '',
-    quantity: '', locationId: '', shelf: ''
+    quantity: '', locationId: '', shelf: '', price: ''
   });
 
   const update = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
@@ -25,7 +25,7 @@ export default function AddProduct() {
     setSaving(true);
     try {
       await addProduct(
-        { name: formData.name, sku: formData.sku, barcode: formData.barcode },
+        { name: formData.name, sku: formData.sku, barcode: formData.barcode, price: parseFloat(formData.price) || 0 },
         formData.locationId,
         parseInt(formData.quantity) || 0,
         formData.shelf
@@ -34,7 +34,7 @@ export default function AddProduct() {
       if (!stayOnPage) {
         navigate(-1);
       } else {
-        setFormData(prev => ({ ...prev, name: '', sku: '', barcode: '', quantity: '' }));
+        setFormData(prev => ({ ...prev, name: '', sku: '', barcode: '', quantity: '', price: '' }));
         toast.info('Yeni ürün eklemeye devam edebilirsiniz.');
       }
     } catch (err) {
@@ -101,7 +101,7 @@ export default function AddProduct() {
             </div>
           </FormSection>
 
-          {/* SKU + Quantity */}
+          {/* SKU + Quantity + Price */}
           <div className="grid grid-cols-2 gap-3">
             <FormSection icon={Hash} label="SKU">
               <input
@@ -123,6 +123,22 @@ export default function AddProduct() {
               />
             </FormSection>
           </div>
+
+          {/* Price */}
+          <FormSection label="Satış Fiyatı (TL)">
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-base">₺</span>
+              <input
+                type="number"
+                value={formData.price}
+                onChange={e => update('price', e.target.value)}
+                className="field-input pl-8 font-bold"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+              />
+            </div>
+          </FormSection>
 
           {/* Location */}
           <FormSection icon={MapPin} label="Lokasyon" required>

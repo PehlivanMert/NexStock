@@ -3,6 +3,7 @@ import BarcodeScanner from '../components/scanner/BarcodeScanner';
 import { useStore } from '../store/useStore';
 import { Package, ArrowRightLeft, ClipboardList, RotateCcw, X, CheckCircle2, AlertCircle, ChevronRight, Banknote, Euro, DollarSign, PoundSterling } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useExchangeRates } from '../hooks/useExchangeRates';
 
 export default function ScannerPage() {
   const navigate = useNavigate();
@@ -14,15 +15,8 @@ export default function ScannerPage() {
   const locations = useStore(state => state.locations);
   const user = useStore(state => state.user);
 
-  const [exchangeRates, setExchangeRates] = useState(null);
+  const { convert } = useExchangeRates();
   const isNameLong = scannedProduct?.name?.length > 20;
-
-  useEffect(() => {
-    fetch('https://api.exchangerate-api.com/v4/latest/TRY')
-      .then(res => res.json())
-      .then(data => setExchangeRates(data.rates))
-      .catch(console.error);
-  }, []);
 
   const handleScan = (barcode) => {
     const product = products.find(p => p.barcode === barcode || p.sku === barcode || p.id === barcode);
@@ -142,23 +136,21 @@ export default function ScannerPage() {
                   <div className="p-4 border-b border-emerald-100 bg-emerald-50 flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5"><Banknote size={16} /> Satış Fiyatı</span>
                     <span className="text-xl font-black text-emerald-700">₺{(scannedProduct.price || 0).toLocaleString('tr-TR')}</span>
-                  </div>
-                  {exchangeRates && (
-                    <div className="grid grid-cols-3 divide-x divide-slate-100">
+                </div>
+                  <div className="grid grid-cols-3 divide-x divide-slate-100">
                       <div className="p-3 text-center hover:bg-blue-50/50 transition-colors">
                         <span className="flex items-center justify-center gap-1 text-[10px] font-bold text-blue-500 mb-1"><Euro size={12}/> EUR</span>
-                        <span className="text-sm font-black text-slate-700">€{(scannedProduct.price * exchangeRates.EUR).toFixed(2)}</span>
+                        <span className="text-sm font-black text-slate-700">€{convert(scannedProduct.price, 'EUR')}</span>
                       </div>
                       <div className="p-3 text-center hover:bg-indigo-50/50 transition-colors">
                         <span className="flex items-center justify-center gap-1 text-[10px] font-bold text-indigo-500 mb-1"><DollarSign size={12}/> USD</span>
-                        <span className="text-sm font-black text-slate-700">${(scannedProduct.price * exchangeRates.USD).toFixed(2)}</span>
+                        <span className="text-sm font-black text-slate-700">${convert(scannedProduct.price, 'USD')}</span>
                       </div>
                       <div className="p-3 text-center hover:bg-purple-50/50 transition-colors">
                         <span className="flex items-center justify-center gap-1 text-[10px] font-bold text-purple-500 mb-1"><PoundSterling size={12}/> GBP</span>
-                        <span className="text-sm font-black text-slate-700">£{(scannedProduct.price * exchangeRates.GBP).toFixed(2)}</span>
+                        <span className="text-sm font-black text-slate-700">£{convert(scannedProduct.price, 'GBP')}</span>
                       </div>
                     </div>
-                  )}
                 </div>
               )}
               {/* Stock by location */}
