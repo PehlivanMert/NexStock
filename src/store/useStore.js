@@ -394,7 +394,7 @@ export const useStore = create(
 
           let existingInv = inventory.find(inv => inv.productId === pid && inv.locationId === (locationId || state.locations[0]?.id));
           if (existingInv) {
-            existingInv.quantity = (existingInv.quantity || 0) + (p.quantity || 0); // Adding to existing quantity
+            existingInv.quantity = p.quantity || 0; // Overwriting existing quantity with new imported figures
             if (p.shelf && p.shelf !== 'Toplu Aktarım') existingInv.shelf = p.shelf;
           } else {
             inventory.push({
