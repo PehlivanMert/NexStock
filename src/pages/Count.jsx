@@ -137,7 +137,46 @@ export default function Count() {
   }, [isScanning]);
 
   if (isScanning) {
-    return <BarcodeScanner onScan={handleScan} onClose={() => setIsScanning(false)} />;
+    const handleClose = () => {
+      if (countingData.some(i => i.counted > 0)) {
+        if (!window.confirm('Kapatmak istediğinize emin misiniz? Okutulan sayımlar taslak olarak arka planda kalacaktır.')) {
+          return;
+        }
+      }
+      setIsScanning(false);
+    };
+
+    const footerActions = (
+      <div className="flex gap-2 ml-2">
+        {countingData.some(i => i.counted > 0) && (
+          <>
+            <button
+              onClick={() => { setIsScanning(false); handleSaveReport(); }}
+              className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+            >
+              Raporla
+            </button>
+            {perms.canAccessAdmin && (
+              <button
+                onClick={() => { setIsScanning(false); handleSyncInventory(); }}
+                className="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+              >
+                Stoka Ekle
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    );
+
+    return (
+      <BarcodeScanner 
+        onScan={handleScan} 
+        onClose={handleClose} 
+        showLog={true} 
+        footerActions={footerActions}
+      />
+    );
   }
 
   const scannedCount = countingData.filter(i => i.counted > 0).length;

@@ -1,15 +1,29 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { useStore } from '../../store/useStore';
-import { X, CheckCircle2, AlertTriangle, Zap, ZapOff } from 'lucide-react';
+import { X, CheckCircle2, AlertTriangle, Zap, ZapOff, ScanBarcode, Keyboard, Camera, Usb, PackageSearch } from 'lucide-react';
 
-export default function BarcodeScanner({ onScan, onClose }) {
+// Mobil cihaz tespiti
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+export default function BarcodeScanner({ onScan, onClose, showLog = false, footerActions = null }) {
   const setScanning = useStore((state) => state.setScanning);
-  const [scanState, setScanState] = useState('scanning'); // scanning | success | error
+  const products = useStore((state) => state.products);
+
+  const [scanState, setScanState] = useState('scanning'); // scanning | success
+  const [cameraError, setCameraError] = useState(false);
   const [lastScanned, setLastScanned] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
-  const [torchSupported, setTorchSupported] = useState(null); // null = unknown, false = unsupported
+  const [torchSupported, setTorchSupported] = useState(null);
   const [scanCount, setScanCount] = useState(0);
+  const [manualInput, setManualInput] = useState('');
+  
+  // Kamera veya USB modu (mobilde hep kamera)
+  const [mode, setMode] = useState(isMobileDevice ? 'camera' : 'usb');
+  
+  // Okutulan ürünlerin logu
+  const [scanLog, setScanLog] = useState([]);
+  
   const lastScanTime = useRef(0);
   const streamRef = useRef(null);
 
@@ -30,11 +44,10 @@ export default function BarcodeScanner({ onScan, onClose }) {
     } catch (e) { /* silent */ }
   };
 
-  // ── Stream yakalama: kamera açılır açılmaz polling ile al ──────────────────
-  // Android'de 1500ms yetmeyebilir; 50ms aralıkla max 8 saniye bekle
   useEffect(() => {
+    if (mode !== 'camera') return;
     let attempts = 0;
-    const maxAttempts = 160; // 50ms × 160 = 8 saniye
+    const maxAttempts = 160;
     const poll = setInterval(() => {
       attempts++;
       const videoEl = document.querySelector('video');
@@ -43,14 +56,9 @@ export default function BarcodeScanner({ onScan, onClose }) {
         streamRef.current = stream;
         const track = stream.getVideoTracks()[0];
         if (track) {
-          // getCapabilities bazı Android tarayıcılarda yok ya da torch raporlamıyor
           const caps = track.getCapabilities?.();
-          if (caps) {
-            setTorchSupported(!!caps.torch);
-          } else {
-            // Capabilities bilinmiyor — butonu göster, denemek zarar vermez
-            setTorchSupported(null);
-          }
+          if (caps) setTorchSupported(!!caps.torch);
+          else setTorchSupported(null);
         }
         clearInterval(poll);
       } else if (attempts >= maxAttempts) {
@@ -58,68 +66,46 @@ export default function BarcodeScanner({ onScan, onClose }) {
       }
     }, 50);
     return () => clearInterval(poll);
-  }, []);
+  }, [mode]);
 
-  // ── Torch control: Android + iOS uyumlu iki aşamalı yaklaşım ────────────
   const applyTorch = useCallback(async (enabled) => {
     try {
-      // Aşama 1: mevcut track üzerinde applyConstraints dene (iOS Safari + yeni Android)
       const videoEl = document.querySelector('video');
       const stream = videoEl?.srcObject || streamRef.current;
       if (stream) {
         const track = stream.getVideoTracks()[0];
         if (track) {
           const caps = track.getCapabilities?.();
-          // caps.torch yoksa bile dene — bazı Android'ler capabilities raporlamıyor
           if (!caps || caps.torch !== false) {
             try {
               await track.applyConstraints({ advanced: [{ torch: enabled }] });
               setTorchSupported(true);
               return;
-            } catch (e) {
-              console.warn('applyConstraints torch failed, trying getUserMedia fallback:', e);
-            }
+            } catch (e) { console.warn(e); }
           } else {
-            // Kesinlikle desteklenmiyor
             setTorchSupported(false);
             return;
           }
         }
       }
-
-      // Aşama 2: Android fallback — mevcut stream'i kapat, torch:true ile yeniden aç
-      // (bazı eski Android kameralar sadece bu yolu destekliyor)
       if (enabled) {
         try {
           const newStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: { ideal: 'environment' },
-              advanced: [{ torch: true }],
-            },
+            video: { facingMode: { ideal: 'environment' }, advanced: [{ torch: true }] },
           });
-          // Yeni stream'i video elementine bağla
           if (videoEl) {
             videoEl.srcObject = newStream;
             streamRef.current = newStream;
           }
           setTorchSupported(true);
-        } catch (e2) {
-          console.warn('getUserMedia torch fallback failed:', e2);
-          setTorchSupported(false);
-        }
+        } catch (e2) { setTorchSupported(false); }
       } else {
-        // Torch kapatmak için normal akışa dön
         if (stream) {
           const track = stream.getVideoTracks()[0];
-          if (track) {
-            try { await track.applyConstraints({ advanced: [{ torch: false }] }); } catch (_) {}
-          }
+          if (track) { try { await track.applyConstraints({ advanced: [{ torch: false }] }); } catch (_) {} }
         }
       }
-    } catch (err) {
-      console.warn('Torch error:', err);
-      setTorchSupported(false);
-    }
+    } catch (err) { setTorchSupported(false); }
   }, []);
 
   const toggleTorch = useCallback(async () => {
@@ -128,11 +114,8 @@ export default function BarcodeScanner({ onScan, onClose }) {
     await applyTorch(newValue);
   }, [torchOn, applyTorch]);
 
-  // Unmount'ta torch'u kapat
   useEffect(() => {
-    return () => {
-      if (torchOn) applyTorch(false);
-    };
+    return () => { if (torchOn) applyTorch(false); };
   }, [torchOn, applyTorch]);
 
   const handleScan = useCallback((detectedCodes) => {
@@ -142,233 +125,240 @@ export default function BarcodeScanner({ onScan, onClose }) {
     lastScanTime.current = now;
     const decodedText = detectedCodes[0].rawValue;
     if (!decodedText) return;
+    
     if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
     playBeep();
     setScanState('success');
     setLastScanned(decodedText);
     setScanCount(c => c + 1);
+    
+    if (showLog) {
+      // Sadece sayım (Count) modundayken log'a ekle
+      const product = products.find(p => p.barcode === decodedText || p.sku === decodedText || p.id === decodedText);
+      setScanLog(prev => {
+        const existingIdx = prev.findIndex(item => item.barcode === decodedText);
+        if (existingIdx >= 0) {
+          const newList = [...prev];
+          newList[existingIdx] = { ...newList[existingIdx], count: newList[existingIdx].count + 1 };
+          const item = newList.splice(existingIdx, 1)[0];
+          return [item, ...newList]; // En üste taşı
+        }
+        return [{ id: Date.now(), barcode: decodedText, product, count: 1 }, ...prev];
+      });
+    }
+
     onScan(decodedText);
     setTimeout(() => setScanState('scanning'), 1000);
-  }, [onScan]);
+  }, [onScan, products, showLog]);
 
-  // ── Fiziksel USB Barkod Okuyucu Desteği ──────────────────────────────────
+  const handleManualSubmit = (e) => {
+    e.preventDefault();
+    if (manualInput.trim()) {
+      handleScan([{ rawValue: manualInput.trim() }]);
+      setManualInput('');
+    }
+  };
+
   useEffect(() => {
     let barcodeString = '';
     let lastKeyTime = Date.now();
-
     const handleKeyDown = (e) => {
-      // Eğer modal falan açıksa veya bir inputa odaklanılmışsa ve o input barkod okuyucu için değilse engellenebilir,
-      // ama genel ekran olduğu için doğrudan dinliyoruz.
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
       const currentTime = Date.now();
-      
-      // Fiziksel tarayıcılar tuş vuruşlarını çok hızlı gönderir (genellikle 20-30ms)
-      // 50ms'den uzun sürerse, bu muhtemelen normal klavye yazımıdır.
-      if (currentTime - lastKeyTime > 50) {
-        barcodeString = '';
-      }
-      
+      if (currentTime - lastKeyTime > 50) barcodeString = '';
       if (e.key === 'Enter') {
         if (barcodeString.length > 2) {
           e.preventDefault();
-          // USB okuyucu okumayı bitirdi, handleScan'i manuel tetikle
           handleScan([{ rawValue: barcodeString }]);
         }
         barcodeString = '';
       } else if (e.key.length === 1) {
         barcodeString += e.key;
       }
-      
       lastKeyTime = currentTime;
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleScan]);
 
-  // setScanning lifecycle
   useEffect(() => {
     setScanning(true);
     return () => setScanning(false);
   }, [setScanning]);
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+  const renderManualInputForm = () => (
+    <form onSubmit={handleManualSubmit} className="relative w-full">
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+        <Keyboard size={18} />
+      </div>
+      <input
+        type="text"
+        value={manualInput}
+        onChange={(e) => setManualInput(e.target.value)}
+        placeholder="Manuel barkod..."
+        className="w-full bg-black/40 border border-white/10 text-white placeholder-white/40 rounded-xl py-3.5 pl-11 pr-16 outline-none focus:bg-black/60 focus:border-blue-400/50 transition-all font-mono text-sm"
+      />
+      <button
+        type="submit"
+        disabled={!manualInput.trim()}
+        className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold disabled:opacity-0 transition-opacity active:scale-95"
+      >
+        GİR
+      </button>
+    </form>
+  );
 
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* ── Top Bar ────────────────────────────────────── */}
-      <div className="flex justify-between items-center px-4 py-3 z-10 shrink-0">
+      <div className="flex justify-between items-center px-4 py-3 z-10 shrink-0 bg-slate-900/80 backdrop-blur-md border-b border-white/5">
         <button
           onClick={onClose}
-          className="p-2.5 bg-black/60 backdrop-blur-sm rounded-2xl border border-white/10 text-white active:scale-90 transition-transform"
+          className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 text-white active:scale-90 transition-all"
         >
           <X size={22} />
         </button>
 
-        <div className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
-          scanState === 'success'
-            ? 'bg-green-500/20 border border-green-400/30 text-green-300'
-            : 'bg-black/60 backdrop-blur-sm border border-white/10 text-white/70'
-        }`}>
-          {scanState === 'success' ? '✓ Barkod Okundu' : 'Barkodu Çerçeveleyın'}
-        </div>
+        {!isMobileDevice && (
+          <div className="flex bg-slate-800/80 p-1 rounded-2xl border border-white/5">
+            <button
+              onClick={() => setMode('camera')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                mode === 'camera' ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Camera size={14} /> Kamera
+            </button>
+            <button
+              onClick={() => setMode('usb')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                mode === 'usb' ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Usb size={14} /> USB / Klavye
+            </button>
+          </div>
+        )}
 
-        {/* Torch button — hidden only if definitively unsupported */}
         <button
           onClick={toggleTorch}
-          disabled={torchSupported === false}
-          className={`p-2.5 rounded-2xl border backdrop-blur-sm text-white active:scale-90 transition-all ${
-            torchSupported === false
-              ? 'bg-black/30 border-white/5 opacity-30 cursor-not-allowed'
+          disabled={torchSupported === false || mode !== 'camera' || cameraError}
+          className={`p-2.5 rounded-2xl border transition-all ${
+            (torchSupported === false || mode !== 'camera' || cameraError)
+              ? 'bg-transparent border-transparent opacity-0 pointer-events-none'
               : torchOn
-              ? 'bg-yellow-400/30 border-yellow-400/40 text-yellow-300'
-              : 'bg-black/60 border-white/10'
+              ? 'bg-yellow-400/20 border-yellow-400/40 text-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.2)]'
+              : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
           }`}
-          title={torchSupported === false ? 'Flaş desteklenmiyor' : torchOn ? 'Flaşı Kapat' : 'Flaşı Aç'}
+          title={torchOn ? 'Flaşı Kapat' : 'Flaşı Aç'}
         >
           {torchOn ? <Zap size={22} fill="currentColor" /> : <ZapOff size={22} />}
         </button>
       </div>
 
-      {/* ── Camera View ──────────────────────────────────── */}
-      <div className="flex-1 relative overflow-hidden">
-        <Scanner
-          onScan={handleScan}
-          onError={(err) => {
-            console.warn('Scanner error:', err);
-            setScanState('error');
-          }}
-          formats={[
-            'qr_code',
-            'ean_13',
-            'ean_8',
-            'code_128',
-            'code_39',
-            'upc_a',
-            'upc_e',
-            'itf',
-            'data_matrix',
-          ]}
-          constraints={{
-            facingMode: { ideal: 'environment' },
-            // Android düşük kaliteli kameralar için makul çözünürlük (1920x1080 timeout yapabilir)
-            width: { min: 640, ideal: 1280, max: 1920 },
-            height: { min: 480, ideal: 720, max: 1080 },
-          }}
-          allowMultiple={true}
-          scanDelay={400}
-          styles={{
-            container: { width: '100%', height: '100%', position: 'absolute', inset: 0 },
-            video: { objectFit: 'cover', width: '100%', height: '100%' },
-          }}
-          components={{
-            audio: false,
-            finder: false,
-          }}
-        />
-
-        {/* Dark vignette */}
-        <div className="absolute inset-0 pointer-events-none scan-vignette" />
-
-        {/* ── Custom Finder Overlay ──── */}
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="relative" style={{ width: '75vw', maxWidth: '300px', height: '160px' }}>
-
-            {/* Semi-dark overlay - outside the box */}
-            <div className="absolute inset-0 -m-[100vw] border-[100vw] border-black/55 rounded-none" />
-
-            {/* Corner brackets */}
-            {[
-              'top-0 left-0 border-t-[3px] border-l-[3px] rounded-tl-2xl',
-              'top-0 right-0 border-t-[3px] border-r-[3px] rounded-tr-2xl',
-              'bottom-0 left-0 border-b-[3px] border-l-[3px] rounded-bl-2xl',
-              'bottom-0 right-0 border-b-[3px] border-r-[3px] rounded-br-2xl',
-            ].map((cls, i) => (
-              <div
-                key={i}
-                className={`absolute w-9 h-9 ${cls} transition-colors duration-300 ${
-                  scanState === 'success' ? 'border-green-400' : 'border-white'
-                }`}
-              />
-            ))}
-
-            {/* Scanning laser line */}
-            {scanState === 'scanning' && (
-              <div
-                className="absolute left-2 right-2 h-0.5 rounded-full"
-                style={{
-                  background: 'linear-gradient(90deg, transparent, #3b82f6, #60a5fa, #3b82f6, transparent)',
-                  animation: 'scanline 2.5s ease-in-out infinite',
-                  boxShadow: '0 0 8px rgba(59, 130, 246, 0.8)',
-                  top: 0,
+      {/* ── Main Layout: Split on Desktop, Stacked on Mobile ──────────────────────────────────── */}
+      <div className={`flex-1 flex overflow-hidden ${!isMobileDevice && showLog ? 'flex-row' : 'flex-col'}`}>
+        
+        {/* Scanner Area */}
+        <div className={`relative overflow-hidden bg-black flex flex-col ${!isMobileDevice && showLog ? 'flex-1 border-r border-white/10' : 'flex-1'}`}>
+          {mode === 'camera' && !cameraError ? (
+            <>
+              <Scanner
+                onScan={handleScan}
+                onError={(err) => {
+                  console.warn('Scanner error:', err);
+                  setCameraError(true);
+                  if (!isMobileDevice) setMode('usb');
                 }}
+                formats={['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'itf', 'data_matrix']}
+                constraints={{ facingMode: { ideal: 'environment' }, width: { min: 640, ideal: 1280, max: 1920 }, height: { min: 480, ideal: 720, max: 1080 } }}
+                allowMultiple={true}
+                scanDelay={400}
+                styles={{ container: { width: '100%', height: '100%', position: 'absolute', inset: 0 }, video: { objectFit: 'cover', width: '100%', height: '100%' } }}
+                components={{ audio: false, finder: false }}
               />
-            )}
-
-            {/* Success overlay */}
-            {scanState === 'success' && (
-              <div className="absolute inset-0 bg-green-500/15 rounded-xl flex items-center justify-center animate-scale-in border border-green-400/40">
-                <CheckCircle2 size={44} className="text-green-400" />
+              <div className="absolute inset-0 pointer-events-none scan-vignette" />
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="relative" style={{ width: '75vw', maxWidth: '300px', height: '160px' }}>
+                  <div className="absolute inset-0 -m-[100vw] border-[100vw] border-black/55 rounded-none" />
+                  {['top-0 left-0 border-t-[3px] border-l-[3px] rounded-tl-2xl', 'top-0 right-0 border-t-[3px] border-r-[3px] rounded-tr-2xl', 'bottom-0 left-0 border-b-[3px] border-l-[3px] rounded-bl-2xl', 'bottom-0 right-0 border-b-[3px] border-r-[3px] rounded-br-2xl'].map((cls, i) => (
+                    <div key={i} className={`absolute w-9 h-9 ${cls} transition-colors duration-300 ${scanState === 'success' ? 'border-green-400' : 'border-white'}`} />
+                  ))}
+                  {scanState === 'scanning' && (
+                    <div className="absolute left-2 right-2 h-0.5 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #3b82f6, #60a5fa, #3b82f6, transparent)', animation: 'scanline 2.5s ease-in-out infinite', boxShadow: '0 0 8px rgba(59, 130, 246, 0.8)', top: 0 }} />
+                  )}
+                  {scanState === 'success' && (
+                    <div className="absolute inset-0 bg-green-500/15 rounded-xl flex items-center justify-center animate-scale-in border border-green-400/40">
+                      <CheckCircle2 size={44} className="text-green-400" />
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-900 relative z-10">
+              <div className="absolute inset-0 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none" />
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="h-16 w-16 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center mb-4 border border-blue-500/20 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
+                  <ScanBarcode size={32} />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">USB & Manuel Mod</h3>
+                <p className="text-slate-400 max-w-[280px] text-xs leading-relaxed">
+                  Fiziksel barkod okuyucunuzla okutma yapabilir veya barkodu manuel girebilirsiniz.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* If showLog is false, just render the manual input at the bottom of the scanner area */}
+          {!showLog && (
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-md border-t border-white/5 z-20" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)' }}>
+              {renderManualInputForm()}
+            </div>
+          )}
         </div>
 
-        {/* Torch active indicator glow */}
-        {torchOn && (
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ boxShadow: 'inset 0 0 60px rgba(251, 191, 36, 0.15)' }}
-          />
-        )}
-      </div>
-
-      {/* ── Bottom Panel ────────────────────────────────── */}
-      <div
-        className="shrink-0 glass-dark border-t border-white/10 px-5 py-5"
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)' }}
-      >
-        {scanState === 'success' && lastScanned ? (
-          <div className="flex items-center gap-3 animate-fade-in">
-            <div className="h-10 w-10 bg-green-500/20 border border-green-400/30 rounded-xl flex items-center justify-center shrink-0">
-              <CheckCircle2 size={22} className="text-green-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-green-400">Barkod Başarıyla Okundu</div>
-              <div className="text-xs text-slate-400 font-mono mt-0.5 truncate">{lastScanned}</div>
-            </div>
-            {scanCount > 1 && (
-              <span className="text-xs font-bold text-slate-400 bg-white/10 px-2 py-1 rounded-lg shrink-0">×{scanCount}</span>
-            )}
-          </div>
-        ) : scanState === 'error' ? (
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-red-500/20 border border-red-400/30 rounded-xl flex items-center justify-center shrink-0">
-              <AlertTriangle size={22} className="text-red-400" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-red-400">Kamera Erişimi Başarısız</div>
-              <div className="text-xs text-slate-400 mt-0.5">Lütfen kamera izinlerini kontrol edin.</div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-white/80">Tarayıcı Aktif</div>
-              <div className="flex items-center gap-2 mt-1.5">
-                {['EAN-13', 'CODE-128', 'QR', 'UPC-A', 'ITF'].map(t => (
-                  <span key={t} className="text-[10px] text-slate-500 bg-white/8 px-2 py-0.5 rounded-md font-mono">{t}</span>
-                ))}
+        {/* Scan Log Area (Desktop: Right Panel, Mobile: Bottom Sheet over camera) */}
+        {showLog && (
+          <div className={`bg-slate-900 flex flex-col ${!isMobileDevice ? 'flex-[1.5] min-w-[350px] max-w-[600px]' : 'h-[55vh] rounded-t-3xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-20 -mt-6'}`}>
+            <div className="p-4 border-b border-white/5 flex items-center justify-between shrink-0">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <PackageSearch size={16} className="text-blue-400" /> Okutulanlar
+              </h3>
+              <div className="flex gap-2 items-center">
+                {scanLog.length > 0 && (
+                  <span className="bg-white/10 text-white text-[10px] font-black px-2 py-1 rounded-lg">
+                    TOPLAM: {scanLog.reduce((acc, curr) => acc + curr.count, 0)}
+                  </span>
+                )}
+                {footerActions}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {torchOn && (
-                <span className="text-[10px] text-yellow-400 font-bold bg-yellow-400/10 px-2 py-0.5 rounded-md flex items-center gap-1">
-                  <Zap size={10} fill="currentColor" /> FLAŞ
-                </span>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              {scanLog.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center opacity-60">
+                  <ScanBarcode size={32} className="mb-3" />
+                  <p className="text-xs font-semibold">Henüz ürün okutulmadı</p>
+                </div>
+              ) : (
+                scanLog.map((log) => (
+                  <div key={log.id} className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center gap-3 animate-fade-in-up">
+                    <div className="h-10 w-10 bg-slate-800 rounded-xl flex items-center justify-center shrink-0 border border-white/5">
+                      <span className="text-sm font-black text-white">{log.count}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-white truncate">{log.product?.name || 'Bilinmeyen Ürün'}</h4>
+                      <p className="text-xs text-slate-400 font-mono mt-0.5 truncate">{log.barcode}</p>
+                    </div>
+                  </div>
+                ))
               )}
-              <div className="h-2 w-2 bg-primary-400 rounded-full animate-pulse" />
-              <span className="text-xs text-slate-500">Taranıyor</span>
+            </div>
+
+            {/* Manual Input Bottom Bar - rendered within the log area if showLog is true */}
+            <div className="p-4 bg-slate-900/80 backdrop-blur-md border-t border-white/5 shrink-0" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)' }}>
+              {renderManualInputForm()}
             </div>
           </div>
         )}
