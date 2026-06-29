@@ -12,6 +12,7 @@ export default function Home() {
   const products = useStore(state => state.products);
   const locations = useStore(state => state.locations);
   const transferLog = useStore(state => state.transferLog);
+  const lastUpdated = useStore(state => state.lastUpdated);
   const updateProfile = useStore(state => state.updateProfile);
   const navigate = useNavigate();
 
@@ -353,6 +354,19 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* ── System Info ────────────────────────────────── */}
+      <div className="bg-slate-100/50 rounded-2xl p-4 animate-fade-in-up delay-400 text-center space-y-1 mt-4">
+        <p className="text-[11px] text-slate-500 font-medium">Sistem Güncelleme Durumu</p>
+        <div className="flex justify-center items-center gap-4 text-[10px] text-slate-400">
+          <div>
+            Ürünler: {lastUpdated?.products ? new Date(lastUpdated.products).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Bilinmiyor'}
+          </div>
+          <div>
+            Stoklar: {lastUpdated?.inventory ? new Date(lastUpdated.inventory).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Bilinmiyor'}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

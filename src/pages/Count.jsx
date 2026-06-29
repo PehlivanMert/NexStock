@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ScanBarcode, Save, MapPin, CheckCircle, Minus, Plus, ClipboardCheck, Search } from 'lucide-react';
 import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 import BarcodeScanner from '../components/scanner/BarcodeScanner';
@@ -98,6 +98,43 @@ export default function Count() {
       toast.error('Bu ürün mevcut lokasyona ait değil.');
     }
   };
+
+  // ── Fiziksel USB Barkod Okuyucu Desteği (Kamera açılmadan) ──
+  const handleScanRef = useRef(handleScan);
+  useEffect(() => { handleScanRef.current = handleScan; }, [handleScan]);
+  const selectedLocRef = useRef(selectedLocation);
+  useEffect(() => { selectedLocRef.current = selectedLocation; }, [selectedLocation]);
+
+  useEffect(() => {
+    let barcodeString = '';
+    let lastKeyTime = Date.now();
+
+    const handleKeyDown = (e) => {
+      if (isScanning) return; // Kamera açıksa zaten BarcodeScanner dinliyor
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      const currentTime = Date.now();
+      if (currentTime - lastKeyTime > 50) barcodeString = '';
+      
+      if (e.key === 'Enter') {
+        if (barcodeString.length > 2) {
+          e.preventDefault();
+          if (selectedLocRef.current) {
+            handleScanRef.current(barcodeString);
+          } else {
+            toast.error('Barkod okutmadan önce lokasyon seçmelisiniz.');
+          }
+        }
+        barcodeString = '';
+      } else if (e.key.length === 1) {
+        barcodeString += e.key;
+      }
+      lastKeyTime = currentTime;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isScanning]);
 
   if (isScanning) {
     return <BarcodeScanner onScan={handleScan} onClose={() => setIsScanning(false)} />;

@@ -49,6 +49,11 @@ export async function loadAppData() {
     products: productsSnap.exists() ? (productsSnap.data().list || []) : [],
     inventory: inventorySnap.exists() ? (inventorySnap.data().list || []) : [],
     locations: locationsSnap.exists() ? (locationsSnap.data().list || []) : [],
+    lastUpdated: {
+      products: productsSnap.exists() && productsSnap.data().updatedAt ? productsSnap.data().updatedAt.toDate().toISOString() : null,
+      inventory: inventorySnap.exists() && inventorySnap.data().updatedAt ? inventorySnap.data().updatedAt.toDate().toISOString() : null,
+      locations: locationsSnap.exists() && locationsSnap.data().updatedAt ? locationsSnap.data().updatedAt.toDate().toISOString() : null,
+    }
   };
 }
 

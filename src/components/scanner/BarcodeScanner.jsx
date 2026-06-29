@@ -135,13 +135,7 @@ export default function BarcodeScanner({ onScan, onClose }) {
     };
   }, [torchOn, applyTorch]);
 
-  // setScanning lifecycle
-  useEffect(() => {
-    setScanning(true);
-    return () => setScanning(false);
-  }, [setScanning]);
-
-  const handleScan = (detectedCodes) => {
+  const handleScan = useCallback((detectedCodes) => {
     if (!detectedCodes || detectedCodes.length === 0) return;
     const now = Date.now();
     if (now - lastScanTime.current < 800) return;
@@ -155,7 +149,49 @@ export default function BarcodeScanner({ onScan, onClose }) {
     setScanCount(c => c + 1);
     onScan(decodedText);
     setTimeout(() => setScanState('scanning'), 1000);
-  };
+  }, [onScan]);
+
+  // ── Fiziksel USB Barkod Okuyucu Desteği ──────────────────────────────────
+  useEffect(() => {
+    let barcodeString = '';
+    let lastKeyTime = Date.now();
+
+    const handleKeyDown = (e) => {
+      // Eğer modal falan açıksa veya bir inputa odaklanılmışsa ve o input barkod okuyucu için değilse engellenebilir,
+      // ama genel ekran olduğu için doğrudan dinliyoruz.
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      const currentTime = Date.now();
+      
+      // Fiziksel tarayıcılar tuş vuruşlarını çok hızlı gönderir (genellikle 20-30ms)
+      // 50ms'den uzun sürerse, bu muhtemelen normal klavye yazımıdır.
+      if (currentTime - lastKeyTime > 50) {
+        barcodeString = '';
+      }
+      
+      if (e.key === 'Enter') {
+        if (barcodeString.length > 2) {
+          e.preventDefault();
+          // USB okuyucu okumayı bitirdi, handleScan'i manuel tetikle
+          handleScan([{ rawValue: barcodeString }]);
+        }
+        barcodeString = '';
+      } else if (e.key.length === 1) {
+        barcodeString += e.key;
+      }
+      
+      lastKeyTime = currentTime;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleScan]);
+
+  // setScanning lifecycle
+  useEffect(() => {
+    setScanning(true);
+    return () => setScanning(false);
+  }, [setScanning]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>

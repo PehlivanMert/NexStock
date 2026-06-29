@@ -85,6 +85,7 @@ export const useStore = create(
       users: [],
       transferLog: [],
       countLogs: [],
+      lastUpdated: null,
 
       // ─── UI STATE ────────────────────────────────────────────
       activeLocation: null,
@@ -140,6 +141,7 @@ export const useStore = create(
             transferLog: transfersResult || [],
             countLogs: countsResult || [],
             users: usersResult || [],
+            lastUpdated: appDataResult.lastUpdated || null,
             dataLoaded: true,
           });
 
