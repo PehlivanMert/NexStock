@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   loadAppData, saveProducts, saveInventory, saveLocations,
-  addTransferLog, loadTransferLog, addCountLog, loadCountLogs,
-  loadAllUsers, logActivity
+  addTransferLog, loadTransferLog, updateTransferLogStatus, 
+  addCountLog, loadCountLogs, loadAllUsers, logActivity, updateActivityLogStatus
 } from '../lib/firestoreService';
 
 // ──────────────────────────────────────────────────────────────
@@ -331,10 +331,12 @@ export const useStore = create(
         const dstLoc = state.locations.find(l => l.id === destLocId)?.name || destLocId;
         const transferEntry = {
           from: srcLoc, to: dstLoc,
+          fromId: sourceLocId, toId: destLocId,
           items: selectedProducts,
           date: new Date().toISOString(),
           user: state.user?.name || 'Bilinmeyen',
           userId: state.user?.uid,
+          status: 'approved'
         };
 
         set((s) => ({
@@ -356,6 +358,9 @@ export const useStore = create(
           details: {
             from: srcLoc,
             to: dstLoc,
+            fromId: sourceLocId,
+            toId: destLocId,
+            status: 'approved',
             itemCount: selectedProducts.length,
             productNames: selectedProducts.map(p => `${p.name || p.productName} (${p.transferQty || p.quantity} adet)`).join(', '),
             items: selectedProducts.map(p => ({
@@ -363,6 +368,73 @@ export const useStore = create(
               barcode: p.barcode || p.sku || '-',
               quantity: p.transferQty || p.quantity || 0
             }))
+          }
+        });
+      },
+
+      revertTransfer: async (logId, transferLog) => {
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
+        const state = get();
+        let inventory = [...state.inventory];
+        
+        const sourceLocId = transferLog.details?.fromId || transferLog.fromId || state.locations.find(l => l.name === (transferLog.details?.from || transferLog.from))?.id;
+        const destLocId = transferLog.details?.toId || transferLog.toId || state.locations.find(l => l.name === (transferLog.details?.to || transferLog.to))?.id;
+        
+        if (!sourceLocId || !destLocId) throw new Error("Lokasyon bulunamadığı için işlem geri alınamıyor.");
+
+        const items = transferLog.details?.items || transferLog.items || [];
+        items.forEach(item => {
+          const productId = item.productId || item.id;
+          if (!productId) return; // Eksik ürün ID'si atla
+          const qty = item.transferQty || item.quantity;
+          
+          // Add back to source
+          const sourceExists = inventory.find(inv => inv.locationId === sourceLocId && inv.productId === productId);
+          if (sourceExists) {
+             inventory = inventory.map(inv => 
+                (inv.locationId === sourceLocId && inv.productId === productId) ? { ...inv, quantity: inv.quantity + qty } : inv
+             );
+          } else {
+             inventory.push({
+               id: `inv-rev-${Date.now()}-${productId}-src`,
+               locationId: sourceLocId, productId,
+               quantity: qty,
+               shelf: 'İade Gelen'
+             });
+          }
+          
+          // Remove from dest
+          inventory = inventory.map(inv => 
+             (inv.locationId === destLocId && inv.productId === productId) ? { ...inv, quantity: Math.max(0, inv.quantity - qty) } : inv
+          );
+        });
+
+        // Update transfer log local state
+        const updatedTransferLogs = state.transferLog.map(t => 
+           t.id === logId ? { ...t, status: 'reverted' } : t
+        );
+        
+        set({ inventory, transferLog: updatedTransferLogs });
+        
+        await Promise.all([
+          saveInventory(inventory),
+          updateTransferLogStatus(logId, 'reverted').catch(e => console.warn('Transfer log status update failed:', e)),
+          updateActivityLogStatus(logId, 'reverted').catch(e => console.warn('Activity log status update failed:', e)),
+        ]);
+        
+        const u = state.user;
+        await logActivity({
+          action: 'TRANSFER',
+          userId: u?.uid,
+          userName: u?.name,
+          userRole: u?.role,
+          details: {
+            from: transferLog.details?.to || transferLog.to,
+            to: transferLog.details?.from || transferLog.from,
+            itemCount: items.length,
+            status: 'revert_action', // To mark this as a revert action log itself
+            note: 'Transfer geri alındı.',
+            productNames: items.map(p => `${p.name || p.productName} (${p.transferQty || p.quantity} adet)`).join(', ')
           }
         });
       },

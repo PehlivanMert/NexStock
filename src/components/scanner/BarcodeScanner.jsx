@@ -162,24 +162,47 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
   useEffect(() => {
     let barcodeString = '';
     let lastKeyTime = Date.now();
+    let timeoutId = null;
+
     const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
       const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 50) barcodeString = '';
+      if (currentTime - lastKeyTime > 250) barcodeString = '';
+
       if (e.key === 'Enter') {
         if (barcodeString.length > 2) {
           e.preventDefault();
           handleScan([{ rawValue: barcodeString }]);
         }
         barcodeString = '';
+        if (timeoutId) clearTimeout(timeoutId);
       } else if (e.key.length === 1) {
         barcodeString += e.key;
+        if (timeoutId) clearTimeout(timeoutId);
+
+        // Enter göndermeyen okuyucular için otomatik onaylama
+        timeoutId = setTimeout(() => {
+          if (barcodeString.length > 2) {
+            handleScan([{ rawValue: barcodeString }]);
+            barcodeString = '';
+          }
+        }, 250);
       }
       lastKeyTime = currentTime;
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleScan]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [handleScan, onClose]);
 
   useEffect(() => {
     setScanning(true);

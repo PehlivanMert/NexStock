@@ -85,6 +85,11 @@ export async function loadTransferLog(limitCount = 50) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
 }
 
+export async function updateTransferLogStatus(logId, status) {
+  if (!logId) return;
+  await updateDoc(doc(db, 'transferLog', logId), { status });
+}
+
 // ─── COUNT LOGS ───────────────────────────────────────────────────────────────
 
 export async function addCountLog(countData) {
@@ -124,6 +129,11 @@ export async function loadActivityLog(limitCount = 100) {
   const q = query(collection(db, 'activityLog'), orderBy('timestamp', 'desc'), limit(limitCount));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function updateActivityLogStatus(logId, status) {
+  if (!logId) return;
+  await updateDoc(doc(db, 'activityLog', logId), { 'details.status': status });
 }
 
 // ─── USER MANAGEMENT (admin operations) ──────────────────────────────────────

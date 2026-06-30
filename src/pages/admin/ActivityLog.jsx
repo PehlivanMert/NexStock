@@ -3,6 +3,7 @@ import { Activity, Filter, RefreshCw, User, Package, ArrowRightLeft, ClipboardLi
 import { loadActivityLog } from '../../lib/firestoreService';
 import { useStore } from '../../store/useStore';
 import { toast } from 'sonner';
+import { ROLE_PERMISSIONS } from '../../store/useStore';
 
 const ACTION_CONFIG = {
   ADD_PRODUCT: { label: 'Ürün Eklendi', icon: Plus, color: 'text-emerald-600', bg: 'bg-emerald-50', badge: 'bg-emerald-100 text-emerald-700' },
@@ -283,7 +284,33 @@ export default function ActivityLogPage() {
 
   const [selectedLog, setSelectedLog] = useState(null);
 
+  const revertTransferStore = useStore(state => state.revertTransfer);
+  const user = useStore(state => state.user);
+  const perms = ROLE_PERMISSIONS[user?.role] || {};
+
+  const handleRevert = async (log) => {
+    if (!window.confirm("Bu transferi iptal edip stokları eski haline getirmek istediğinize emin misiniz?")) return;
+    try {
+      await revertTransferStore(log.id, log);
+      toast.success("Transfer başarıyla geri alındı.");
+      setSelectedLog(null);
+      fetchLogs();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
   useEffect(() => { fetchLogs(); }, []);
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' && selectedLog) {
+        setSelectedLog(null);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [selectedLog]);
 
   const uniqueUsers = [...new Set(logs.map(l => l.userName).filter(Boolean))];
   const uniqueActions = [...new Set(logs.map(l => l.action).filter(Boolean))];
@@ -416,6 +443,9 @@ export default function ActivityLogPage() {
                         </td>
                         <td className="px-5 py-3.5 text-slate-600 text-xs max-w-xs truncate">
                           {formatDetails(log.action, log.details || {})}
+                          {(log.details?.status === 'reverted' || log.status === 'reverted') && (
+                            <span className="ml-2 text-[10px] font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-md">İptal Edildi</span>
+                          )}
                         </td>
                         <td className="px-5 py-3.5 text-xs text-slate-400 whitespace-nowrap">
                           {formatTime(log.timestamp)}
@@ -586,7 +616,15 @@ export default function ActivityLogPage() {
               )}
             </div>
             
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 items-center">
+              {selectedLog.action === 'TRANSFER' && perms.canAccessAdmin && selectedLog.details?.status !== 'reverted' && selectedLog.status !== 'reverted' && selectedLog.details?.status !== 'revert_action' && (
+                 <button onClick={() => handleRevert(selectedLog)} className="px-5 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl font-bold transition-colors">
+                   Transferi Geri Al
+                 </button>
+              )}
+              {(selectedLog.details?.status === 'reverted' || selectedLog.status === 'reverted') && (
+                 <span className="px-5 py-2 text-red-600 font-bold bg-red-50 rounded-xl border border-red-100">İptal Edilmiş</span>
+              )}
               <button onClick={() => setSelectedLog(null)} className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition-colors">
                 Kapat
               </button>

@@ -20,6 +20,11 @@ export default function Count() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState('scanned');
   const [confirmSync, setConfirmSync] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferDestLoc, setTransferDestLoc] = useState('');
+  
+  const performTransferStore = useStore(state => state.performTransfer);
 
   // Personel için kullanılabilir lokasyonlar
   const isPrivileged = perms.canAccessAdmin || user?.activeLocationId === 'all';
@@ -108,13 +113,14 @@ export default function Count() {
   useEffect(() => {
     let barcodeString = '';
     let lastKeyTime = Date.now();
+    let timeoutId = null;
 
     const handleKeyDown = (e) => {
       if (isScanning) return; // Kamera açıksa zaten BarcodeScanner dinliyor
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
       const currentTime = Date.now();
-      if (currentTime - lastKeyTime > 50) barcodeString = '';
+      if (currentTime - lastKeyTime > 250) barcodeString = '';
       
       if (e.key === 'Enter') {
         if (barcodeString.length > 2) {
@@ -126,24 +132,80 @@ export default function Count() {
           }
         }
         barcodeString = '';
+        if (timeoutId) clearTimeout(timeoutId);
       } else if (e.key.length === 1) {
         barcodeString += e.key;
+        if (timeoutId) clearTimeout(timeoutId);
+        
+        timeoutId = setTimeout(() => {
+          if (barcodeString.length > 2) {
+            if (selectedLocRef.current) {
+              handleScanRef.current(barcodeString);
+            } else {
+              toast.error('Barkod okutmadan önce lokasyon seçmelisiniz.');
+            }
+            barcodeString = '';
+          }
+        }, 250);
       }
       lastKeyTime = currentTime;
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [isScanning]);
+
+  const handleDoTransfer = async () => {
+    if (!transferDestLoc) {
+      toast.error('Lütfen varış lokasyonu seçin.');
+      return;
+    }
+    if (transferDestLoc === selectedLocation) {
+      toast.error('Varış lokasyonu ile çıkış lokasyonu aynı olamaz.');
+      return;
+    }
+    const countedItems = countingData.filter(item => item.counted > 0);
+    const selectedProducts = countedItems.map(item => ({
+       productId: item.productId,
+       name: item.name,
+       barcode: item.sku,
+       transferQty: item.counted
+    }));
+    
+    try {
+      await performTransferStore(selectedLocation, transferDestLoc, selectedProducts);
+      toast.success('Ürünler başarıyla transfer edildi!');
+      setCountingData(prev => prev.map(item => ({ ...item, counted: 0 })));
+      setShowTransferModal(false);
+      setIsScanning(false);
+    } catch (err) {
+      toast.error('Transfer hatası: ' + err.message);
+    }
+  };
+
+  // Tüm modalları Esc ile kapatmak için global listener
+  useEffect(() => {
+    const handleGlobalEsc = (e) => {
+      if (e.key === 'Escape') {
+        if (showCloseConfirm) setShowCloseConfirm(false);
+        if (confirmSync) setConfirmSync(false);
+        if (showTransferModal) setShowTransferModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalEsc);
+    return () => window.removeEventListener('keydown', handleGlobalEsc);
+  }, [showCloseConfirm, confirmSync, showTransferModal]);
 
   if (isScanning) {
     const handleClose = () => {
       if (countingData.some(i => i.counted > 0)) {
-        if (!window.confirm('Kapatmak istediğinize emin misiniz? Okutulan sayımlar taslak olarak arka planda kalacaktır.')) {
-          return;
-        }
+        setShowCloseConfirm(true);
+      } else {
+        setIsScanning(false);
       }
-      setIsScanning(false);
     };
 
     const footerActions = (
@@ -155,6 +217,12 @@ export default function Count() {
               className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
             >
               Raporla
+            </button>
+            <button
+              onClick={() => setShowTransferModal(true)}
+              className="bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors flex items-center gap-1"
+            >
+              <ArrowRightLeft size={12} /> Transfer
             </button>
             {perms.canAccessAdmin && (
               <button
@@ -361,9 +429,62 @@ export default function Count() {
           </button>
         )}
       </div>
+      {/* Custom Close Confirm Modal */}
+      {showCloseConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-scale-in">
+            <div className="h-14 w-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <ClipboardCheck size={28} className="text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 text-center mb-2">Emin misiniz?</h3>
+            <p className="text-sm text-slate-500 text-center mb-5">
+              Kapatmak istediğinize emin misiniz? Okutulan sayımlar taslak olarak arka planda kalacaktır.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowCloseConfirm(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors rounded-xl font-semibold">İptal</button>
+              <button onClick={() => { setShowCloseConfirm(false); setIsScanning(false); }} className="flex-1 py-3 bg-red-600 hover:bg-red-700 transition-colors text-white rounded-xl font-bold">Evet, Kapat</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Modal */}
+      {showTransferModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-scale-in">
+            <div className="h-14 w-14 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <ArrowRightLeft size={28} className="text-violet-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 text-center mb-2">Hızlı Transfer</h3>
+            <p className="text-sm text-slate-500 text-center mb-5">
+              Okutulan <strong>{countingData.filter(i => i.counted > 0).length}</strong> çeşit ürünü hangi lokasyona transfer etmek istiyorsunuz?
+            </p>
+            
+            <div className="mb-5 space-y-2">
+              <label className="text-xs font-bold text-slate-500 ml-1">Varış Lokasyonu</label>
+              <select
+                value={transferDestLoc}
+                onChange={(e) => setTransferDestLoc(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400"
+              >
+                <option value="">Lokasyon Seçin...</option>
+                {locations.filter(l => l.id !== selectedLocation).map(loc => (
+                  <option key={loc.id} value={loc.id}>{loc.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setShowTransferModal(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors rounded-xl font-semibold">İptal</button>
+              <button onClick={handleDoTransfer} className="flex-1 py-3 bg-violet-600 hover:bg-violet-700 transition-colors text-white rounded-xl font-bold">Transferi Başlat</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sync Confirm Modal */}
       {confirmSync && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-scale-in">
             <div className="h-14 w-14 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <CheckCircle size={28} className="text-orange-600" />
