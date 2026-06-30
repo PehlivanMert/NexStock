@@ -1,78 +1,247 @@
-# NexStock PWA - Envanter Yönetim Sistemi
+# NexStock PWA — Akıllı Envanter & Stok Yönetim Sistemi
 
-NexStock, gelişmiş envanter ve stok yönetimi için tasarlanmış modern, duyarlı ve güçlü bir Progresif Web Uygulamasıdır (PWA). Şık glassmorphism arayüzü, Firebase Firestore ile gerçek zamanlı veri senkronizasyonu, gelişmiş önbellekleme mekanizmaları ve barkod okuma özellikleri ile donatılmıştır.
+<p align="center">
+  <img src="https://img.shields.io/badge/Version-1.1.0-6c63ff?style=for-the-badge" alt="Version" />
+  <img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react" alt="React" />
+  <img src="https://img.shields.io/badge/Firebase-Firestore-ffca28?style=for-the-badge&logo=firebase" alt="Firebase" />
+  <img src="https://img.shields.io/badge/PWA-Ready-5a0fc8?style=for-the-badge&logo=pwa" alt="PWA" />
+  <img src="https://img.shields.io/badge/Vite-8-646cff?style=for-the-badge&logo=vite" alt="Vite" />
+</p>
+
+---
+
+NexStock, çok lokasyonlu depo ve stok süreçlerini tek bir çatı altında yönetmek için geliştirilmiş, **gerçek zamanlı senkronizasyon**, **offline-first çalışma** ve **barkod okuma** özelliklerine sahip modern bir Progressive Web Application'dır (PWA). Hem masaüstü hem de mobil cihazlara kurulabilir; internet bağlantısı kesilse dahi çalışmaya devam eder.
+
+---
+
+## ✨ Öne Çıkan Özellikler
+
+| Özellik | Açıklama |
+|---|---|
+| 📦 **Çok Lokasyonlu Stok** | Sınırsız depo/raf tanımlayın; stokları lokasyon bazında yönetin |
+| 📷 **Barkod Tarama** | Kamera veya USB/Bluetooth fiziksel okuyucu desteği |
+| 🔄 **Stok Transferi** | Depolar arası ürün hareketi; her transfer kayıt altına alınır |
+| 🔢 **Depo Sayımı** | Fiziksel sayımı sisteme işleyin; uyuşmazlıkları anında görün |
+| 📊 **Anlık Raporlama** | Aktivite günlüğü, tükenme uyarıları ve grafik analizler |
+| 📥 **Excel Import** | Toplu stok girişi için Excel/CSV dosya içe aktarımı |
+| 👥 **Rol Tabanlı Erişim** | Admin / Manager / Staff katmanlı yetki sistemi |
+| ⚡ **Sıfır Yükleme** | RAM önbellek mimarisi sayesinde tüm sayfa geçişleri anında |
+| 📱 **PWA Kurulumu** | iOS, Android ve masaüstüne uygulama olarak kurulum |
+
+---
+
+## 🚀 Kurulum
+
+### Gereksinimler
+
+- **Node.js** v18 veya üzeri
+- **npm** v9 veya üzeri
+- Bir **Firebase** projesi (Firestore + Authentication etkinleştirilmiş)
+
+### 1. Depoyu Klonlayın
+
+```bash
+git clone https://github.com/kullanici-adiniz/nexstock.git
+cd nexstock
+```
+
+### 2. Bağımlılıkları Yükleyin
+
+```bash
+npm install
+```
+
+### 3. Firebase Yapılandırması
+
+`src/lib/firebase.js` dosyasını açın ve kendi Firebase projenizin bilgileriyle güncelleyin:
+
+```js
+// src/lib/firebase.js
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+```
+
+> **İpucu:** Firebase Console → Proje Ayarları → Genel → Uygulamalarınız bölümünden bu değerleri alabilirsiniz.
+
+### 4. Geliştirme Sunucusunu Başlatın
+
+```bash
+npm run dev
+```
+
+Tarayıcınızda `http://localhost:5173` adresine gidin.
+
+### 5. Üretim Derlemesi (Opsiyonel)
+
+```bash
+npm run build       # Üretim için derle
+npm run preview     # Üretim derlemesini önizle
+```
+
+Derleme çıktısı `dist/` klasörüne oluşturulur. Bu klasörü herhangi bir statik hosting servisi (Firebase Hosting, Vercel, Netlify vb.) üzerinden yayına alabilirsiniz.
+
+### 6. PWA Olarak Cihaza Kurulum
+
+Uygulamanın yayınlandığı URL'yi tarayıcıda açtıktan sonra:
+
+- **iOS (Safari):** Alt menüdeki **Paylaş** → **Ana Ekrana Ekle**
+- **Android (Chrome):** Sağ üst menü → **Ana Ekrana Ekle** ya da ekranda çıkan yükleme banner'ı
+- **Masaüstü (Chrome / Edge):** Adres çubuğu sağındaki **Yükle** ikonu
+
+Kurulum sonrasında uygulama tam ekran çalışır. Service Worker sayesinde internet bağlantısı olmadan da saniyeler içinde açılır.
 
 ---
 
 ## 📖 Kullanım Kılavuzu
 
-Bu bölüm, uygulamanın günlük hayatta nasıl kullanılacağına ve modüllerin nasıl işlediğine dair bilgiler içerir.
+### Giriş ve Rol Sistemi
 
-### 1. Uygulamayı Cihaza Yükleme (PWA Olarak Kurulum)
-Uygulama tam bir PWA altyapısına sahiptir. Tarayıcıdan açtıktan sonra:
-* **iOS (Safari):** Tarayıcının alt menüsündeki "Paylaş" ikonuna tıklayıp **"Ana Ekrana Ekle"** seçeneğini seçin.
-* **Android (Chrome):** Sağ üstteki menüden (üç nokta) **"Ana Ekrana Ekle"** veya sayfanın altındaki yükleme banner'ını kullanarak cihazınıza uygulama olarak yükleyin.
-* **Web (Masaüstü Chrome/Edge):** Adres çubuğunun en sağında çıkan "Yükle (Install)" ikonuna tıklayarak bilgisayarınıza kurun.
-* *Not:* Yüklendikten sonra uygulama cihazınızda tam ekran çalışacaktır. PWA Service Worker sayesinde internetiniz kopsa dahi uygulama saniyeler içinde açılır ve giriş ekranı yüklenir.
+Uygulamaya ilk girişte e-posta ve şifre ile kimlik doğrulaması yapılır. Her kullanıcıya bir **rol** atanır:
 
-### 2. Ürün Ekleme (Yeni Stok Girişi)
-Ürünlerinizi sisteme manuel olarak tek tek veya Excel üzerinden topluca ekleyebilirsiniz.
-* **Tekil Ekleme:** 
-  1. Alt menüden veya anasayfadan `+` (Ürün Ekle) ikonuna tıklayın.
-  2. Ürün adı, miktarı ve lokasyon zorunlu alanlardır. Barkod alanının yanındaki "Kamera" ikonuna tıklayıp kameradan barkodu direkt okutabilirsiniz.
-  3. Peş peşe ürün girecekseniz, **"Yeni Ekle"** butonunu kullanın. Bu sayede seçtiğiniz depo ve raf bilgisi korunur, sadece yeni ürünün ismini girip hızla sisteme kayıt eklemeye devam edersiniz.
-  4. İşiniz bittiğinde "Kaydet & Çık" diyebilirsiniz.
-* **Toplu Ekleme (Excel/CSV ile Import):**
-  1. Anasayfadan `Toplu Aktarım` modülüne girin.
-  2. Barkod, Ürün Adı ve Miktar bilgilerini içeren Excel dosyanızı yükleyin. 
-  3. Sistem sütunları otomatik tanıyacaktır. Eşleşmeleri onaylayın. Sistemde var olan barkodlar tespit edilirse mevcut stokların üzerine ekleme yapılır.
-
-### 3. Envanter (Stok Listesi) Görüntüleme ve Düzenleme
-Sistemdeki mevcut stok durumunu görmek için alt menüden **Stok** (`Inventory`) ikonuna tıklayın.
-* **Arama ve Filtreleme:** Yukarıdaki arama çubuğundan ürün veya barkod araması yapabilir; sağındaki "Filtre" butonuna basarak raf, lokasyon veya sadece tükenen (kritik) ürünlere göre listeyi daraltabilirsiniz.
-* **Hızlı Stok Düzenleme:** Listede bir ürünün miktarını değiştirmek isterseniz ürünün üzerine tıklamanıza gerek yoktur. Ürün listesindeki miktar alanının yanındaki `- / +` butonlarına tıklayarak stokları saniyeler içinde güncelleyebilirsiniz. (Uygulama arka planda değişikliği buluta yazar).
-* **Detaylı Düzenleme / Silme:** Ürünün üzerine tıkladığınızda açılan detay penceresinden raf/lokasyon bilgilerini düzenleyebilir veya stok kartını silebilirsiniz.
-
-### 4. Stok Transferi (Depolar Arası Taşıma)
-Bir lokasyondaki ürünleri başka bir lokasyona taşıyarak stok düşüm ve artırımlarını otomatikleştirmek için anasayfadan **Transfer** menüsüne girin.
-1. **Yön Seçimi:** "Çıkış Deposu" ve "Hedef Lokasyon" seçin. İleri'ye tıklayın.
-2. **Ürün Seçimi:** Çıkış deposunda bulunan ürünler listelenecektir. Listenin üstündeki **arama kutusunu** kullanarak yüzlerce ürün arasından aradığınızı anında bulun.
-3. Listeden aktarmak istediğiniz ürüne tıkladığınızda ürün "Seçili" hale gelir ve altında "Transfer Adedi" paneli açılır.
-4. Miktarı girin. Dilerseniz birden fazla ürünü seçip hepsine ayrı miktarlar girebilirsiniz.
-5. **Transferi Başlat** dediğinizde ürünler çıkış deposundan düşülüp hedef depoya eklenir ve sistem günlüğüne kaydedilir.
-
-### 5. Depo Sayımı
-Fiziksel deponuzdaki stoklar ile sistemdeki stokları eşitlemek için anasayfadan **Sayım** menüsüne girin.
-1. Lokasyonu (depoyu) seçtiğinizde o depodaki tüm ürünler ekrana gelir.
-2. **Barkod ile Hızlı Sayım:** Ortadaki dev `Barkod Okut` butonuna basın. Kameraya gösterdiğiniz her ürün, listenizdeki ürünün sayılan miktarını 1 adet artırır. Ardı ardına okutarak hızlıca sayım yapabilirsiniz.
-3. **Manuel Sayım:** Dilerseniz listedeki `- / +` butonlarını kullanarak da sayıları girebilirsiniz. Uzun listelerde aradığınızı bulmak için üstteki "Arama" kutusunu kullanabilirsiniz.
-4. **Filtreleme:** Ekranın üstündeki kutucukları kullanarak listeyi sadece "Okutuldu", "Tümü" veya sadece "Fark Var" (Sistem ile sayılanın uyuşmadığı) olarak filtreleyebilirsiniz.
-5. **Kayıt:** Sayım bitince `Rapor Kaydet` diyerek sonucu kayda geçirebilir veya `Stoku Güncelle` diyerek sistemdeki hatalı envanter rakamlarını saydığınız doğru rakamlarla ezebilirsiniz.
-
-### 6. Barkod Okuyucu (Akıllı Tarayıcı)
-Doğrudan işlem yapmak ve bilgi almak için ekranın alt ortasında bulunan büyük **Tarayıcı** butonuna dokunun.
-* Kameraya bir ürün gösterdiğinizde sistem ürünü bulur ve hangi lokasyonlarda kaç adet olduğunu size raporlar.
-* **Akıllı Aksiyon (Context-Aware):** Çıkan sonuçtaki **Transfer** butonuna basarsanız; sistem sizi otomatik olarak transfer sayfasına yönlendirir, ürünü ve ürünün bulunduğu en dolu depoyu otomatik olarak seçer. Size sadece miktar girip onaylamak kalır.
-
-### 7. Yönetici Paneli ve Günlükler
-(Sadece Admin ve Manager rolündeki kullanıcılar içindir)
-* **Aktivite Kayıtları:** Anasayfada bulunan aktivite günlüğünde; "Hangi personel, saat kaçta, hangi ürünü ekledi, sildi veya transfer etti?" görebilirsiniz.
-* **Kullanıcı & Lokasyon Yönetimi:** Anasayfadaki `Yönetim` (Admin) butonuyla sisteme yeni mağazalar/depolar tanımlayabilir, yeni personeller ekleyip rollerini ayarlayabilir ve uygulamanın genel raporlarına erişebilirsiniz.
+| Rol | Yetkiler |
+|---|---|
+| **Admin** | Tüm özellikler + kullanıcı ve lokasyon yönetimi |
+| **Manager** | Stok, transfer, sayım + aktivite günlüğü görüntüleme |
+| **Staff** | Yalnızca atandığı lokasyonun stoğunu görüntüleme ve sayım |
 
 ---
 
-## 🛠️ Teknik Özellikler ve Altyapı
-* **Frontend**: React (Vite), TailwindCSS, Lucide React
-* **Backend & Auth**: Firebase (Auth, Firestore)
-* **Veri ve Performans Yönetimi (Caching)**: 
-  * UI State ve Kullanıcı Oturumu Zustand `persist` (LocalStorage) ile saklanır.
-  * Veritabanı (Ürün/Envanter) uygulamaya ilk girişte toplu olarak çekilir ve Zustand RAM Cache'de tutulur. Bu sayede sayfa içi aramalar, filtrelemeler ve sekme geçişlerinde 0 bekleme süresi (Sıfır Yükleme/Spinner) elde edilir.
-  * `vite-plugin-pwa` ile tüm statik dosyalar ve Google fontları servis worker tarafından önbelleklenir.
-* **Diğer Araçlar**: XLSX (Excel ayrıştırma), ZXing (Kamera / Barkod donanım entegrasyonu), Recharts (Grafikler)
+### 1. Ürün Ekleme
 
-## Geliştiriciler İçin Kurulum Talimatları
-1. Projeyi bilgisayarınıza indirin ve ana dizine gidin.
-2. Bağımlılıkları yüklemek için `npm install` komutunu çalıştırın.
-3. Kendi Firebase projenizi oluşturun ve bağlantı ayarlarını `src/lib/firebase.js` dosyasına ekleyin.
-4. Geliştirme sunucusunu başlatmak için `npm run dev` komutunu kullanın.
-5. Uygulamayı yayına hazırlamak için `npm run build` komutunu çalıştırın.
+**Tekil Ekleme:**
+
+1. Ana ekrandaki **`+`** (Ürün Ekle) butonuna tıklayın.
+2. Ürün adı, miktarı ve lokasyon alanlarını doldurun.
+3. Barkod alanının yanındaki **Kamera** ikonuyla kameradan barkodu okutabilirsiniz.
+4. Peş peşe birden fazla ürün eklemek için **"Yeni Ekle"** butonunu kullanın — seçili depo ve raf bilgisi korunur.
+5. İşlem bittiğinde **"Kaydet & Çık"** ile kaydedip çıkın.
+
+**Toplu Ekleme (Excel Import):**
+
+1. Ana ekrandan **Toplu Aktarım** modülüne girin.
+2. Barkod, Ürün Adı ve Miktar sütunlarını içeren Excel/CSV dosyanızı yükleyin.
+3. Sistem sütunları otomatik olarak eşleştirir; mevcut barkodlarda stok miktarlarının üzerine ekleme yapılır.
+
+---
+
+### 2. Stok Listesi (Envanter)
+
+Alt menüden **Stok** ikonuna tıklayarak mevcut envanteri görüntüleyin.
+
+- **Arama:** Ürün adı veya barkod ile anlık arama yapın.
+- **Filtreleme:** Lokasyon, raf veya tükenme durumuna göre listeyi filtreleyin.
+- **Hızlı Güncelleme:** Ürün satırındaki **`-`** / **`+`** butonlarıyla miktarı anında değiştirin — değişiklik arka planda buluta kaydedilir.
+- **Detaylı Düzenleme:** Ürün üzerine tıklayarak detay panelini açın; raf, lokasyon ve diğer bilgileri düzenleyin veya ürünü silin.
+
+---
+
+### 3. Stok Transferi (Depolar Arası)
+
+Ana ekrandan **Transfer** menüsüne girin.
+
+1. **Çıkış Deposu** ve **Hedef Lokasyon** seçin → **İleri**.
+2. Arama kutusuyla listelenen ürünler arasında arama yapın.
+3. Aktarmak istediğiniz ürüne tıklayın → **Transfer Adedi** paneli açılır.
+4. Miktarı girin. Birden fazla ürün seçip her birine ayrı miktar girebilirsiniz.
+5. **"Transferi Başlat"** ile işlemi tamamlayın. Ürünler çıkış deposundan düşülür, hedef depoya eklenir ve aktivite günlüğüne kaydedilir.
+
+---
+
+### 4. Depo Sayımı
+
+Ana ekrandan **Sayım** menüsüne girin.
+
+1. Sayım yapılacak **lokasyonu** seçin.
+2. **Barkod ile Sayım:** "Barkod Okut" butonuna basın; kameraya gösterilen her ürün sayılan miktarı 1 artırır.
+3. **Manuel Sayım:** Listedeki **`-`** / **`+`** butonları ya da doğrudan miktar alanına yazarak sayım yapın.
+4. Üstteki filtrelerle listeyi **Tümü**, **Okutuldu** veya **Fark Var** olarak görüntüleyin.
+5. Sayım bitince:
+   - **"Rapor Kaydet"** → Sayım sonucunu raporlar bölümüne ekler.
+   - **"Stoku Güncelle"** → Sistemdeki mevcut rakamları sayılan doğru değerlerle günceller.
+
+---
+
+### 5. Barkod Tarayıcı
+
+Alt menünün ortasındaki büyük **Tarayıcı** butonuna dokunun.
+
+- Kameraya ürün gösterildiğinde sistem ürünü bulur ve hangi lokasyonda kaç adet olduğunu listeler.
+- Sonuç ekranındaki **Transfer** butonuna basarsanız sistem sizi transfer sayfasına yönlendirir, ürünü ve en dolu depoyu otomatik olarak seçer — size sadece miktarı onaylamak kalır.
+
+> USB/Bluetooth fiziksel barkod okuyucular da desteklenir; tarayıcı sayfası açıkken okuyucudan gelen veri otomatik olarak işlenir.
+
+---
+
+### 6. Yönetici Paneli
+
+*(Yalnızca Admin ve Manager rolleri)*
+
+- **Aktivite Günlüğü:** Hangi personelin, saat kaçta, hangi işlemi gerçekleştirdiğini görün.
+- **Kullanıcı Yönetimi:** Yeni personel ekleyin, rollerini ve lokasyon atamalarını düzenleyin.
+- **Lokasyon Yönetimi:** Yeni depo / raf tanımlayın veya mevcutları düzenleyin.
+- **Raporlar:** Stok hareketleri ve sayım geçmişini grafik ve tablo formatında inceleyin.
+
+---
+
+## 🛠️ Teknoloji Yığını
+
+| Katman | Teknoloji |
+|---|---|
+| **Frontend Framework** | React 19 + Vite 8 |
+| **Stil** | TailwindCSS 4 |
+| **İkon Kütüphanesi** | Lucide React |
+| **State Yönetimi** | Zustand (persist + RAM cache) |
+| **Backend & Auth** | Firebase (Firestore + Authentication) |
+| **PWA Altyapısı** | vite-plugin-pwa + Workbox Service Worker |
+| **Barkod Okuma** | ZXing / html5-qrcode (kamera + USB) |
+| **Excel İşleme** | SheetJS (XLSX) |
+| **Grafikler** | Recharts |
+| **Bildirimler** | Sonner (toast) |
+
+### Önbellek Mimarisi
+
+```
+İlk Giriş: Firestore → Zustand RAM Cache
+Tüm Sonraki İşlemler: RAM Cache (0ms) + Firestore (arka planda)
+Statik Dosyalar: Service Worker önbelleği (offline erişim)
+Kullanıcı Oturumu: LocalStorage (Zustand persist)
+```
+
+Bu mimari sayesinde, veri yüklendikten sonra tüm arama ve sayfa geçişleri **sıfır bekleme süresi** ile gerçekleşir.
+
+---
+
+## 📁 Proje Yapısı
+
+```
+nexstock/
+├── src/
+│   ├── components/       # Yeniden kullanılabilir UI bileşenleri
+│   ├── hooks/            # Özel React hook'ları (Firestore, auth vb.)
+│   ├── lib/              # Firebase yapılandırması
+│   ├── pages/            # Sayfa bileşenleri (Inventory, Transfer, Count…)
+│   ├── store/            # Zustand store tanımları
+│   └── main.jsx          # Uygulama giriş noktası
+├── public/               # Statik dosyalar ve PWA manifest
+├── dist/                 # Üretim derlemesi (git'e eklenmez)
+├── vite.config.js
+└── package.json
+```
+
+---
+
+## 📄 Lisans
+
+Bu proje özel kullanım için geliştirilmiştir. Kaynak kodu paylaşım veya kullanım için lütfen proje sahibiyle iletişime geçin.
+
+---
+
+<p align="center">
+  <b>NexStock</b> — Stok yönetimini basit, hızlı ve güvenilir kılmak için tasarlandı.
+</p>
