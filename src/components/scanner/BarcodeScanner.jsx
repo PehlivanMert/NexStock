@@ -21,11 +21,19 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
   // Kamera veya USB modu (mobilde hep kamera)
   const [mode, setMode] = useState(isMobileDevice ? 'camera' : 'usb');
   
-  // Okutulan ürünlerin logu
   const [scanLog, setScanLog] = useState([]);
+  const [pageVisible, setPageVisible] = useState(true);
   
   const lastScanTime = useRef(0);
   const streamRef = useRef(null);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      setPageVisible(!document.hidden);
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   const playBeep = () => {
     try {
@@ -291,7 +299,7 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
         
         {/* Scanner Area */}
         <div className={`relative overflow-hidden bg-black flex flex-col flex-1 ${!isMobileDevice && showLog ? 'border-r border-white/10' : ''}`}>
-          {mode === 'camera' && !cameraError ? (
+          {mode === 'camera' && !cameraError && pageVisible ? (
             <>
               <Scanner
                 onScan={handleScan}
@@ -348,9 +356,9 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
           )}
         </div>
 
-        {/* Scan Log Area (Desktop: Right Panel, Mobile: Bottom Sheet over camera) */}
+        {/* Scan Log Area (Desktop: Right Panel, Mobile: Bottom Sheet Area) */}
         {showLog && (
-          <div className={`flex flex-col ${!isMobileDevice ? 'bg-slate-900 flex-[1.5] min-w-[350px] max-w-[600px]' : 'absolute bottom-0 left-0 right-0 z-20 h-[50vh] bg-slate-950/85 backdrop-blur-3xl border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] rounded-t-3xl'}`}>
+          <div className={`flex flex-col ${!isMobileDevice ? 'bg-slate-900 flex-[1.5] min-w-[350px] max-w-[600px]' : 'z-20 h-[48vh] shrink-0 bg-slate-950 border-t border-white/10 shadow-[0_-15px_40px_rgba(0,0,0,0.5)] rounded-t-3xl relative -mt-5'}`}>
             {/* Grab handle for mobile visual */}
             {isMobileDevice && (
               <div className="w-full flex justify-center pt-3 pb-1 shrink-0">
