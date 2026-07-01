@@ -228,7 +228,7 @@ export default function Count() {
               onClick={() => { setIsScanning(false); handleSyncInventory(); }}
               className="flex-1 bg-orange-500 hover:bg-orange-400 text-white py-3 rounded-xl text-xs font-bold transition-colors text-center shadow-[0_0_15px_rgba(249,115,22,0.3)]"
             >
-              Stoka Ekle
+              Stoku Güncelle
             </button>
           )}
         </>

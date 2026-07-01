@@ -467,8 +467,16 @@ export default function ActivityLogPage() {
 
         </div>
         
-        <div className="flex items-center gap-3 ml-auto pl-3 border-l border-slate-100">
+        <div className="flex items-center gap-3 ml-auto pl-3 border-l border-slate-100 flex-wrap">
           <span className="text-xs text-slate-400 font-medium">{filtered.length} kayıt</span>
+          {perms.canAccessAdmin && (
+            <button
+              onClick={() => toggleAllSelection(filtered)}
+              className="text-xs font-bold text-primary-600 bg-primary-50 px-3 py-1.5 rounded-lg hover:bg-primary-100 transition-colors"
+            >
+              {selectedIds.size === filtered.length && filtered.length > 0 ? 'Seçimi Temizle' : 'Tümünü Seç'}
+            </button>
+          )}
           {perms.canAccessAdmin && selectedIds.size > 0 && (
             <button
               onClick={() => handleDelete(selectedIds)}
@@ -583,7 +591,7 @@ export default function ActivityLogPage() {
                     <div className={`h-10 w-10 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0 mt-0.5`}>
                       <Icon size={18} className={cfg.color} />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 pr-8">
                       <div className="flex items-center justify-between mb-0.5">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${cfg.badge}`}>{cfg.label}</span>
                         <span className="text-[10px] text-slate-400">{formatTime(log.timestamp)}</span>

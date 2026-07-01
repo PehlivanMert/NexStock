@@ -6,6 +6,8 @@ import { X, CheckCircle2, AlertTriangle, Zap, ZapOff, ScanBarcode, Keyboard, Cam
 // Mobil cihaz tespiti
 const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+let sharedAudioCtx = null;
+
 export default function BarcodeScanner({ onScan, onClose, showLog = false, footerActions = null }) {
   const setScanning = useStore((state) => state.setScanning);
   const products = useStore((state) => state.products);
@@ -35,13 +37,45 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  const BEEP_BASE64 = "data:audio/wav;base64,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";
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
 
   const playBeep = () => {
     try {
-      const audio = new Audio(BEEP_BASE64);
-      audio.volume = 0.5;
-      audio.play().catch(() => {});
+      if (isIOS) {
+        // iOS'ta asenkron ses çalmak kilit ekranında medya oynatıcı çıkmasına neden oluyor.
+        // Bu kronik iOS kısıtlaması nedeniyle iOS cihazlarda sesi kapatıp sadece görsel efekt kullanıyoruz.
+        return;
+      }
+      
+      // Android / Masaüstü için titreşim ve ses
+      if (navigator.vibrate) navigator.vibrate(100);
+
+      if (!sharedAudioCtx) {
+        sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (sharedAudioCtx.state === 'suspended') {
+        sharedAudioCtx.resume().catch(() => {});
+      }
+      
+      const oscillator = sharedAudioCtx.createOscillator();
+      const gainNode = sharedAudioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(sharedAudioCtx.destination);
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(1800, sharedAudioCtx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(1400, sharedAudioCtx.currentTime + 0.08);
+      gainNode.gain.setValueAtTime(0.35, sharedAudioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, sharedAudioCtx.currentTime + 0.18);
+      
+      oscillator.start();
+      oscillator.stop(sharedAudioCtx.currentTime + 0.18);
+      
+      setTimeout(() => {
+        if (sharedAudioCtx && sharedAudioCtx.state === 'running') {
+          sharedAudioCtx.suspend().catch(() => {});
+        }
+      }, 250);
     } catch (e) { /* silent */ }
   };
 
@@ -287,7 +321,7 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
         <div className={`relative overflow-hidden bg-black flex flex-col flex-1 ${!isMobileDevice && showLog ? 'border-r border-white/10' : ''}`}>
           {mode === 'camera' && !cameraError && pageVisible ? (
             <>
-              <Scanner
+                <Scanner
                 onScan={handleScan}
                 onError={(err) => {
                   console.warn('Scanner error:', err);
@@ -298,7 +332,7 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
                 constraints={{ facingMode: { ideal: 'environment' }, width: { min: 640, ideal: 1280, max: 1920 }, height: { min: 480, ideal: 720, max: 1080 } }}
                 allowMultiple={true}
                 scanDelay={400}
-                styles={{ container: { width: '100%', height: '100%', position: 'absolute', inset: 0 }, video: { objectFit: 'cover', width: '100%', height: '100%' } }}
+                styles={{ container: { width: '100%', height: '100%', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }, video: { objectFit: 'contain', width: '100%', height: '100%', backgroundColor: 'black' } }}
                 components={{ audio: false, finder: false }}
               />
               <div className="absolute inset-0 pointer-events-none scan-vignette" />

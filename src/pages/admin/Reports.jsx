@@ -26,6 +26,54 @@ export default function Reports() {
   const [generatedHistory, setGeneratedHistory] = useState({});
   const [expandedKey, setExpandedKey] = useState(null);
 
+  const [selectedLogIds, setSelectedLogIds] = useState(new Set());
+  const [deleting, setDeleting] = useState(false);
+  
+  const user = useStore(state => state.user);
+  const deleteLogsStore = useStore(state => state.deleteLogs);
+  const ROLE_PERMISSIONS = useStore(state => state.ROLE_PERMISSIONS) || { admin: { canAccessAdmin: true }, manager: { canAccessAdmin: true } };
+  const perms = ROLE_PERMISSIONS[user?.role] || {};
+
+  const handleToggleSelectLog = (id) => {
+    const newSel = new Set(selectedLogIds);
+    if (newSel.has(id)) newSel.delete(id);
+    else newSel.add(id);
+    setSelectedLogIds(newSel);
+  };
+
+  const handleSelectAllLogs = () => {
+    if (selectedLogIds.size === countLogs.length && countLogs.length > 0) {
+      setSelectedLogIds(new Set());
+    } else {
+      setSelectedLogIds(new Set(countLogs.map(l => l.id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!perms.canAccessAdmin) return;
+    if (!window.confirm(`Seçili ${selectedLogIds.size} sayım raporunu kalıcı olarak silmek istediğinize emin misiniz?`)) return;
+
+    setDeleting(true);
+    try {
+      const itemsToDelete = [];
+      const updatedCountLogs = [...countLogs];
+      
+      selectedLogIds.forEach(id => {
+        itemsToDelete.push({ collectionName: 'countLogs', id });
+        const idx = updatedCountLogs.findIndex(c => c.id === id);
+        if (idx !== -1) updatedCountLogs.splice(idx, 1);
+      });
+
+      await deleteLogsStore({ countLogs: updatedCountLogs }, itemsToDelete);
+      
+      toast.success(`${selectedLogIds.size} sayım raporu silindi.`);
+      setSelectedLogIds(new Set());
+    } catch (err) {
+      toast.error("Silme başarısız: " + err.message);
+    }
+    setDeleting(false);
+  };
+
   // Build inventory data (optionally filtered by date range - for transfer log)
   const buildInventoryRows = () =>
     inventory.map(inv => {
@@ -347,6 +395,26 @@ export default function Reports() {
             </>
           )}
         </div>
+        
+        {countLogs.length > 0 && perms.canAccessAdmin && (
+          <div className="flex items-center gap-3 mb-6 bg-white p-3 rounded-xl border border-slate-200 card-shadow">
+            <button
+              onClick={handleSelectAllLogs}
+              className="text-xs font-bold text-primary-600 bg-primary-50 px-3 py-1.5 rounded-lg hover:bg-primary-100 transition-colors"
+            >
+              {selectedLogIds.size === countLogs.length ? 'Seçimi Temizle' : 'Tümünü Seç'}
+            </button>
+            {selectedLogIds.size > 0 && (
+              <button
+                onClick={handleDeleteSelected}
+                disabled={deleting}
+                className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Siliniyor...' : `Seçilileri Sil (${selectedLogIds.size})`}
+              </button>
+            )}
+          </div>
+        )}
 
         {countLogs.length === 0 ? (
           <div className="bg-white p-8 rounded-2xl border border-slate-200/80 text-center card-shadow">
@@ -359,15 +427,25 @@ export default function Reports() {
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {countLogs.slice().reverse().map(log => (
-              <div key={log.id} className="bg-white rounded-2xl border border-slate-200/80 card-shadow overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-start">
+              <div key={log.id} className="bg-white rounded-2xl border border-slate-200/80 card-shadow overflow-hidden relative">
+                {perms.canAccessAdmin && (
+                  <div className="absolute top-4 right-4 z-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedLogIds.has(log.id)}
+                      onChange={() => handleToggleSelectLog(log.id)}
+                      className="w-5 h-5 rounded text-primary-600 focus:ring-primary-500 border-slate-300 cursor-pointer"
+                    />
+                  </div>
+                )}
+                <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-start pr-12">
                   <div>
                     <h3 className="font-bold text-slate-800">{log.locationName} Sayımı</h3>
                     <div className="text-xs text-slate-400 mt-0.5">
                       {new Date(log.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
-                  <div className="bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg text-xs font-mono">
+                  <div className="bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg text-xs font-mono hidden sm:block">
                     #{log.id.slice(-6)}
                   </div>
                 </div>
