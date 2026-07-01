@@ -199,59 +199,57 @@ export default function Count() {
     return () => window.removeEventListener('keydown', handleGlobalEsc);
   }, [showCloseConfirm, confirmSync, showTransferModal]);
 
-  if (isScanning) {
-    const handleClose = () => {
-      if (countingData.some(i => i.counted > 0)) {
-        setShowCloseConfirm(true);
-      } else {
-        setIsScanning(false);
-      }
-    };
+  const handleCloseScanner = () => {
+    if (countingData.some(i => i.counted > 0)) {
+      setShowCloseConfirm(true);
+    } else {
+      setIsScanning(false);
+    }
+  };
 
-    const footerActions = (
-      <div className="flex gap-2.5">
-        {countingData.some(i => i.counted > 0) && (
-          <>
+  const footerActions = (
+    <div className="flex gap-2.5">
+      {countingData.some(i => i.counted > 0) && (
+        <>
+          <button
+            onClick={() => { setIsScanning(false); handleSaveReport(); }}
+            className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl text-xs font-bold transition-colors text-center border border-white/10 backdrop-blur-sm"
+          >
+            Raporla
+          </button>
+          <button
+            onClick={() => setShowTransferModal(true)}
+            className="flex-[1.2] bg-violet-500 hover:bg-violet-400 text-white py-3 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
+          >
+            <ArrowRightLeft size={14} /> Transfer
+          </button>
+          {perms.canAccessAdmin && (
             <button
-              onClick={() => { setIsScanning(false); handleSaveReport(); }}
-              className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl text-xs font-bold transition-colors text-center border border-white/10 backdrop-blur-sm"
+              onClick={() => { setIsScanning(false); handleSyncInventory(); }}
+              className="flex-1 bg-orange-500 hover:bg-orange-400 text-white py-3 rounded-xl text-xs font-bold transition-colors text-center shadow-[0_0_15px_rgba(249,115,22,0.3)]"
             >
-              Raporla
+              Stoka Ekle
             </button>
-            <button
-              onClick={() => setShowTransferModal(true)}
-              className="flex-[1.2] bg-violet-500 hover:bg-violet-400 text-white py-3 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
-            >
-              <ArrowRightLeft size={14} /> Transfer
-            </button>
-            {perms.canAccessAdmin && (
-              <button
-                onClick={() => { setIsScanning(false); handleSyncInventory(); }}
-                className="flex-1 bg-orange-500 hover:bg-orange-400 text-white py-3 rounded-xl text-xs font-bold transition-colors text-center shadow-[0_0_15px_rgba(249,115,22,0.3)]"
-              >
-                Stoka Ekle
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    );
-
-    return (
-      <BarcodeScanner 
-        onScan={handleScan} 
-        onClose={handleClose} 
-        showLog={true} 
-        footerActions={footerActions}
-      />
-    );
-  }
+          )}
+        </>
+      )}
+    </div>
+  );
 
   const scannedCount = countingData.filter(i => i.counted > 0).length;
   const hasDiscrepancy = countingData.some(i => i.counted > 0 && i.counted !== i.expected);
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative">
+    <>
+      {isScanning ? (
+        <BarcodeScanner 
+          onScan={handleScan} 
+          onClose={handleCloseScanner} 
+          showLog={true} 
+          footerActions={footerActions}
+        />
+      ) : (
+        <div className="flex flex-col h-full bg-slate-50 relative">
       {/* Header */}
       <div className="bg-white px-4 pt-4 pb-3 border-b border-slate-100 shrink-0">
         <h1 className="text-xl font-extrabold text-slate-800 tracking-tight mb-3">Depo Sayımı</h1>
@@ -429,6 +427,9 @@ export default function Count() {
           </button>
         )}
       </div>
+        </div>
+      )}
+      
       {/* Custom Close Confirm Modal */}
       {showCloseConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
@@ -500,6 +501,6 @@ export default function Count() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
