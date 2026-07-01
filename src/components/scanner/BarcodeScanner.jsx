@@ -41,6 +41,13 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
       gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
       oscillator.start();
       oscillator.stop(audioCtx.currentTime + 0.18);
+      
+      // iOS kilit ekranında müzik çalar gibi gözükmesini engellemek için context'i kapatıyoruz
+      setTimeout(() => {
+        if (audioCtx.state !== 'closed') {
+          audioCtx.close().catch(() => {});
+        }
+      }, 250);
     } catch (e) { /* silent */ }
   };
 
@@ -279,11 +286,11 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
         </button>
       </div>
 
-      {/* ── Main Layout: Split on Desktop, Stacked on Mobile ──────────────────────────────────── */}
-      <div className={`flex-1 flex overflow-hidden ${!isMobileDevice && showLog ? 'flex-row' : 'flex-col'}`}>
+      {/* ── Main Layout ──────────────────────────────────── */}
+      <div className={`flex-1 flex overflow-hidden ${!isMobileDevice && showLog ? 'flex-row' : 'flex-col relative'}`}>
         
         {/* Scanner Area */}
-        <div className={`relative overflow-hidden bg-black flex flex-col ${!isMobileDevice && showLog ? 'flex-1 border-r border-white/10' : 'flex-1'}`}>
+        <div className={`relative overflow-hidden bg-black flex flex-col flex-1 ${!isMobileDevice && showLog ? 'border-r border-white/10' : ''}`}>
           {mode === 'camera' && !cameraError ? (
             <>
               <Scanner
@@ -343,19 +350,29 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
 
         {/* Scan Log Area (Desktop: Right Panel, Mobile: Bottom Sheet over camera) */}
         {showLog && (
-          <div className={`bg-slate-900 flex flex-col ${!isMobileDevice ? 'flex-[1.5] min-w-[350px] max-w-[600px]' : 'h-[55vh] rounded-t-3xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-20 -mt-6'}`}>
-            <div className="p-4 border-b border-white/5 flex items-center justify-between shrink-0">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <PackageSearch size={16} className="text-blue-400" /> Okutulanlar
-              </h3>
-              <div className="flex gap-2 items-center">
+          <div className={`flex flex-col ${!isMobileDevice ? 'bg-slate-900 flex-[1.5] min-w-[350px] max-w-[600px]' : 'absolute bottom-0 left-0 right-0 z-20 h-[50vh] bg-slate-950/85 backdrop-blur-3xl border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] rounded-t-3xl'}`}>
+            {/* Grab handle for mobile visual */}
+            {isMobileDevice && (
+              <div className="w-full flex justify-center pt-3 pb-1 shrink-0">
+                <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+              </div>
+            )}
+            <div className={`px-4 pb-4 border-b border-white/10 shrink-0 ${!isMobileDevice ? 'pt-4' : 'pt-2'}`}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <PackageSearch size={18} className="text-blue-400" /> Okutulanlar
+                </h3>
                 {scanLog.length > 0 && (
-                  <span className="bg-white/10 text-white text-[10px] font-black px-2 py-1 rounded-lg">
+                  <span className="bg-white/15 text-white text-xs font-black px-2.5 py-1 rounded-lg shadow-sm">
                     TOPLAM: {scanLog.reduce((acc, curr) => acc + curr.count, 0)}
                   </span>
                 )}
-                {footerActions}
               </div>
+              {footerActions && (
+                <div className="mt-4">
+                  {footerActions}
+                </div>
+              )}
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">

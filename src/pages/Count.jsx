@@ -209,25 +209,25 @@ export default function Count() {
     };
 
     const footerActions = (
-      <div className="flex gap-2 ml-2">
+      <div className="flex gap-2.5">
         {countingData.some(i => i.counted > 0) && (
           <>
             <button
               onClick={() => { setIsScanning(false); handleSaveReport(); }}
-              className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+              className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl text-xs font-bold transition-colors text-center border border-white/10 backdrop-blur-sm"
             >
               Raporla
             </button>
             <button
               onClick={() => setShowTransferModal(true)}
-              className="bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors flex items-center gap-1"
+              className="flex-[1.2] bg-violet-500 hover:bg-violet-400 text-white py-3 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
             >
-              <ArrowRightLeft size={12} /> Transfer
+              <ArrowRightLeft size={14} /> Transfer
             </button>
             {perms.canAccessAdmin && (
               <button
                 onClick={() => { setIsScanning(false); handleSyncInventory(); }}
-                className="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+                className="flex-1 bg-orange-500 hover:bg-orange-400 text-white py-3 rounded-xl text-xs font-bold transition-colors text-center shadow-[0_0_15px_rgba(249,115,22,0.3)]"
               >
                 Stoka Ekle
               </button>
