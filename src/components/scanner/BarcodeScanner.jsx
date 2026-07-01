@@ -37,17 +37,9 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
-
   const playBeep = () => {
     try {
-      if (isIOS) {
-        // iOS'ta asenkron ses çalmak kilit ekranında medya oynatıcı çıkmasına neden oluyor.
-        // Bu kronik iOS kısıtlaması nedeniyle iOS cihazlarda sesi kapatıp sadece görsel efekt kullanıyoruz.
-        return;
-      }
-      
-      // Android / Masaüstü için titreşim ve ses
+      // Android / Masaüstü için titreşim
       if (navigator.vibrate) navigator.vibrate(100);
 
       if (!sharedAudioCtx) {
@@ -332,11 +324,11 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
                 constraints={{ facingMode: { ideal: 'environment' }, width: { min: 640, ideal: 1280, max: 1920 }, height: { min: 480, ideal: 720, max: 1080 } }}
                 allowMultiple={true}
                 scanDelay={400}
-                styles={{ container: { width: '100%', height: '100%', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }, video: { objectFit: 'contain', width: '100%', height: '100%', backgroundColor: 'black' } }}
+                styles={{ container: { width: '100%', height: '100%', position: 'absolute', inset: 0 }, video: { objectFit: 'cover', width: '100%', height: '100%', backgroundColor: 'black' } }}
                 components={{ audio: false, finder: false }}
               />
               <div className="absolute inset-0 pointer-events-none scan-vignette" />
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+              <div className={`absolute inset-0 pointer-events-none flex items-center justify-center ${!showLog ? 'pb-32' : ''}`}>
                 <div className="relative" style={{ width: '75vw', maxWidth: '300px', height: '160px' }}>
                   <div className="absolute inset-0 -m-[100vw] border-[100vw] border-black/55 rounded-none" />
                   {['top-0 left-0 border-t-[3px] border-l-[3px] rounded-tl-2xl', 'top-0 right-0 border-t-[3px] border-r-[3px] rounded-tr-2xl', 'bottom-0 left-0 border-b-[3px] border-l-[3px] rounded-bl-2xl', 'bottom-0 right-0 border-b-[3px] border-r-[3px] rounded-br-2xl'].map((cls, i) => (

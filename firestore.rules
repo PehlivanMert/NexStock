@@ -45,21 +45,21 @@ service cloud.firestore {
     match /transferLog/{logId} {
       allow read: if isAuth();
       allow create: if isAuth();
-      allow update, delete: if isAdmin();
+      allow update, delete: if isManagerOrAdmin();
     }
 
     // ─── Count logs ───────────────────────────────────────────
     match /countLogs/{logId} {
       allow read: if isAuth();
       allow create: if isAuth();
-      allow update, delete: if isAdmin();
+      allow update, delete: if isManagerOrAdmin();
     }
 
     // ─── Activity log ──────────────────────────────────────────
     match /activityLog/{logId} {
-      allow read: if isAdmin();
+      allow read: if isManagerOrAdmin();
       allow create: if isAuth();
-      allow update, delete: if false;
+      allow update, delete: if isManagerOrAdmin();
     }
 
     // ─── Deny all else ────────────────────────────────────────
