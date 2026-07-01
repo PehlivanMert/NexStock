@@ -48,7 +48,13 @@ export default function ScannerPage() {
     }
   };
 
-  const handleClose = () => navigate(-1);
+  const handleClose = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
   const handleRescan = () => { setScannedData(null); setScannedProduct(null); };
 
   const handleTransfer = () => {

@@ -66,7 +66,13 @@ export default function TerminalLayout() {
             <div className="flex items-center gap-2.5">
               {!isHome ? (
                 <button
-                  onClick={() => navigate(-1)}
+                  onClick={() => {
+                    if (window.history.state && window.history.state.idx > 0) {
+                      navigate(-1);
+                    } else {
+                      navigate('/');
+                    }
+                  }}
                   className="p-2 -ml-2 text-slate-600 hover:text-primary-600 rounded-xl hover:bg-primary-50 transition-all active:scale-90"
                 >
                   <ArrowLeft size={20} />

@@ -32,7 +32,11 @@ export default function AddProduct() {
       );
       toast.success('Ürün başarıyla eklendi!');
       if (!stayOnPage) {
-        navigate(-1);
+        if (window.history.state && window.history.state.idx > 0) {
+          navigate(-1);
+        } else {
+          navigate('/');
+        }
       } else {
         setFormData(prev => ({ ...prev, name: '', sku: '', barcode: '', quantity: '', price: '' }));
         toast.info('Yeni ürün eklemeye devam edebilirsiniz.');
