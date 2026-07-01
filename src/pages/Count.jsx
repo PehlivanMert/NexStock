@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScanBarcode, Save, MapPin, CheckCircle, Minus, Plus, ClipboardCheck, Search } from 'lucide-react';
+import { ScanBarcode, Save, MapPin, CheckCircle, Minus, Plus, ClipboardCheck, Search, ArrowRightLeft } from 'lucide-react';
 import { useStore, ROLE_PERMISSIONS } from '../store/useStore';
 import BarcodeScanner from '../components/scanner/BarcodeScanner';
 import { toast } from 'sonner';
