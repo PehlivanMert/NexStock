@@ -3,7 +3,8 @@ import { persist } from 'zustand/middleware';
 import {
   loadAppData, saveProducts, saveInventory, saveLocations,
   addTransferLog, loadTransferLog, updateTransferLogStatus, 
-  addCountLog, loadCountLogs, loadAllUsers, logActivity, updateActivityLogStatus
+  addCountLog, loadCountLogs, loadAllUsers, logActivity, updateActivityLogStatus,
+  deleteLogsBatch
 } from '../lib/firestoreService';
 
 // ──────────────────────────────────────────────────────────────
@@ -437,6 +438,25 @@ export const useStore = create(
             productNames: items.map(p => `${p.name || p.productName} (${p.transferQty || p.quantity} adet)`).join(', ')
           }
         });
+      },
+
+      // ─── LOG DELETION ──────────────────────────────────────────
+      deleteLogs: async (logsToKeep, itemsToDelete) => {
+        // logsToKeep: { transferLog: [], countLogs: [] } 
+        // itemsToDelete: [{ collectionName: 'activityLog', id: '...' }, ...]
+        if (!get().dataLoaded) throw new Error("Data not loaded yet");
+        
+        await deleteLogsBatch(itemsToDelete);
+        
+        // Update local state if needed
+        const state = get();
+        const updates = {};
+        if (logsToKeep.transferLog) updates.transferLog = logsToKeep.transferLog;
+        if (logsToKeep.countLogs) updates.countLogs = logsToKeep.countLogs;
+        
+        if (Object.keys(updates).length > 0) {
+           set(updates);
+        }
       },
 
       // ─── BULK IMPORT ─────────────────────────────────────────

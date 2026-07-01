@@ -357,7 +357,7 @@ export default function Reports() {
             <p className="text-sm text-slate-400 mt-1">El terminalinden "Rapor Kaydet" ile ilk sayımı oluşturun.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {countLogs.slice().reverse().map(log => (
               <div key={log.id} className="bg-white rounded-2xl border border-slate-200/80 card-shadow overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-start">
@@ -383,25 +383,25 @@ export default function Reports() {
                   </div>
                 </div>
 
-                <div className="px-5 pb-4 space-y-1.5 max-h-44 overflow-y-auto">
+                <div className="px-5 pb-5 space-y-2.5 max-h-72 overflow-y-auto custom-scrollbar">
                   {log.items.map((item, idx) => {
                     const diff = item.counted - item.expected;
                     return (
-                      <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-50 transition-colors">
-                        <div className="min-w-0 flex-1 pr-3">
-                          <div className="text-sm font-semibold text-slate-700 truncate">{item.name}</div>
-                          <div className="text-xs text-slate-400 font-mono">{item.sku}</div>
+                      <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50/80 hover:bg-slate-50 hover:shadow-sm transition-all">
+                        <div className="min-w-0 flex-1 pr-4">
+                          <div className="text-[15px] font-bold text-slate-700 truncate mb-1">{item.name}</div>
+                          <div className="text-[11px] text-slate-400 font-mono tracking-wider">{item.sku}</div>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0 text-center">
-                          <div>
-                            <div className="text-[10px] text-slate-400">Sistem</div>
-                            <div className="text-sm font-bold text-slate-600">{item.expected}</div>
+                        <div className="flex items-center gap-4 shrink-0 text-center">
+                          <div className="bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm">
+                            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5">Sistem</div>
+                            <div className="text-[15px] font-bold text-slate-600">{item.expected}</div>
                           </div>
-                          <div>
-                            <div className="text-[10px] text-slate-400">Sayılan</div>
-                            <div className="text-sm font-black text-slate-800">{item.counted}</div>
+                          <div className="bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm">
+                            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5">Sayılan</div>
+                            <div className="text-[15px] font-black text-slate-800">{item.counted}</div>
                           </div>
-                          <div className={`px-2 py-1 rounded-lg text-sm font-black border ${diff === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : diff > 0 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                          <div className={`px-3 py-2 rounded-xl text-[15px] font-black border min-w-[50px] flex items-center justify-center ${diff === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : diff > 0 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
                             {diff > 0 ? `+${diff}` : diff}
                           </div>
                         </div>

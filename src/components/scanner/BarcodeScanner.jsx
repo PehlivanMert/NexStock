@@ -35,27 +35,13 @@ export default function BarcodeScanner({ onScan, onClose, showLog = false, foote
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
+  const BEEP_BASE64 = "data:audio/wav;base64,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";
+
   const playBeep = () => {
     try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(1800, audioCtx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(1400, audioCtx.currentTime + 0.08);
-      gainNode.gain.setValueAtTime(0.35, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.18);
-      
-      // iOS kilit ekranında müzik çalar gibi gözükmesini engellemek için context'i kapatıyoruz
-      setTimeout(() => {
-        if (audioCtx.state !== 'closed') {
-          audioCtx.close().catch(() => {});
-        }
-      }, 250);
+      const audio = new Audio(BEEP_BASE64);
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
     } catch (e) { /* silent */ }
   };
 

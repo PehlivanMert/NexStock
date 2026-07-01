@@ -139,6 +139,17 @@ export async function updateActivityLogStatus(logId, status) {
 // ─── USER MANAGEMENT (admin operations) ──────────────────────────────────────
 // List all users from Firestore /users collection
 
+export async function deleteLogsBatch(items) {
+  // items: [{ collectionName: 'activityLog', id: '123' }, ...]
+  const batch = writeBatch(db);
+  items.forEach(({ collectionName, id }) => {
+    if (collectionName && id) {
+      batch.delete(doc(db, collectionName, id));
+    }
+  });
+  await batch.commit();
+}
+
 export async function loadAllUsers() {
   const snap = await getDocs(collection(db, 'users'));
   return snap.docs.map(d => ({ uid: d.id, ...d.data() }));

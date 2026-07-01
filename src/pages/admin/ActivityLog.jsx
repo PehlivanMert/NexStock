@@ -156,13 +156,19 @@ export default function ActivityLogPage() {
   const [filterUser, setFilterUser] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [deleting, setDeleting] = useState(false);
+
   const transferLog = useStore(state => state.transferLog);
   const countLogs = useStore(state => state.countLogs);
   const products = useStore(state => state.products);
   const locations = useStore(state => state.locations);
+  const deleteLogsStore = useStore(state => state.deleteLogs);
 
   const fetchLogs = async () => {
     setLoading(true);
+    setSelectedIds(new Set());
     try {
       const dbLogs = await loadActivityLog(200).catch(err => {
         console.error('Failed to load activity log from DB:', err);
@@ -224,6 +230,7 @@ export default function ActivityLogPage() {
 
       // Match and merge
       const mergedDbLogs = dbLogs.map(dbLog => {
+        let sourceDocs = [{ collectionName: 'activityLog', id: dbLog.id }];
         if (dbLog.action === 'TRANSFER') {
           const dbDate = getLogDate(dbLog);
           const matchIndex = tLogs.findIndex(tLog => {
@@ -234,9 +241,11 @@ export default function ActivityLogPage() {
           });
           if (matchIndex > -1) {
             const matched = tLogs[matchIndex];
+            sourceDocs.push({ collectionName: 'transferLog', id: matched.id });
             tLogs.splice(matchIndex, 1);
             return {
               ...dbLog,
+              _sourceDocs: sourceDocs,
               details: {
                 ...dbLog.details,
                 items: matched.details.items
@@ -253,9 +262,11 @@ export default function ActivityLogPage() {
           });
           if (matchIndex > -1) {
             const matched = cLogs[matchIndex];
+            sourceDocs.push({ collectionName: 'countLogs', id: matched.id });
             cLogs.splice(matchIndex, 1);
             return {
               ...dbLog,
+              _sourceDocs: sourceDocs,
               details: {
                 ...dbLog.details,
                 items: matched.details.items
@@ -263,8 +274,11 @@ export default function ActivityLogPage() {
             };
           }
         }
-        return dbLog;
+        return { ...dbLog, _sourceDocs: sourceDocs };
       });
+      
+      tLogs.forEach(t => t._sourceDocs = [{ collectionName: 'transferLog', id: t.id }]);
+      cLogs.forEach(c => c._sourceDocs = [{ collectionName: 'countLogs', id: c.id }]);
 
       const all = [...mergedDbLogs, ...tLogs, ...cLogs];
       const unique = Array.from(new Map(all.map(item => [item.id, item])).values());
@@ -282,8 +296,6 @@ export default function ActivityLogPage() {
     setLoading(false);
   };
 
-  const [selectedLog, setSelectedLog] = useState(null);
-
   const revertTransferStore = useStore(state => state.revertTransfer);
   const user = useStore(state => state.user);
   const perms = ROLE_PERMISSIONS[user?.role] || {};
@@ -297,6 +309,65 @@ export default function ActivityLogPage() {
       fetchLogs();
     } catch (e) {
       toast.error(e.message);
+    }
+  };
+
+  const handleDelete = async (idsToDelete) => {
+    if (!perms.canAccessAdmin) return;
+    if (!window.confirm(`Seçili ${idsToDelete.size} işlemi kalıcı olarak silmek istediğinize emin misiniz?`)) return;
+
+    setDeleting(true);
+    try {
+      const itemsToDelete = [];
+      const updatedTransferLog = [...transferLog];
+      const updatedCountLogs = [...countLogs];
+      
+      idsToDelete.forEach(id => {
+        const log = logs.find(l => l.id === id);
+        if (log && log._sourceDocs) {
+          itemsToDelete.push(...log._sourceDocs);
+          
+          log._sourceDocs.forEach(doc => {
+            if (doc.collectionName === 'transferLog') {
+              const idx = updatedTransferLog.findIndex(t => t.id === doc.id);
+              if (idx !== -1) updatedTransferLog.splice(idx, 1);
+            } else if (doc.collectionName === 'countLogs') {
+              const idx = updatedCountLogs.findIndex(c => c.id === doc.id);
+              if (idx !== -1) updatedCountLogs.splice(idx, 1);
+            }
+          });
+        }
+      });
+
+      await deleteLogsStore(
+        { transferLog: updatedTransferLog, countLogs: updatedCountLogs },
+        itemsToDelete
+      );
+      
+      toast.success(`${idsToDelete.size} işlem silindi.`);
+      setSelectedIds(new Set());
+      
+      // Update local logs immediately so we don't have to refetch
+      setLogs(prev => prev.filter(l => !idsToDelete.has(l.id)));
+    } catch (err) {
+      toast.error("Silme başarısız: " + err.message);
+    }
+    setDeleting(false);
+  };
+
+  const toggleSelection = (e, id) => {
+    e.stopPropagation();
+    const newSel = new Set(selectedIds);
+    if (newSel.has(id)) newSel.delete(id);
+    else newSel.add(id);
+    setSelectedIds(newSel);
+  };
+
+  const toggleAllSelection = (filteredLogs) => {
+    if (selectedIds.size === filteredLogs.length && filteredLogs.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredLogs.map(l => l.id)));
     }
   };
 
@@ -356,9 +427,10 @@ export default function ActivityLogPage() {
         </button>
       </div>
 
-      {/* ── Filters ─────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 card-shadow p-4 flex flex-wrap gap-3 items-center">
-        {/* Search */}
+      {/* ── Filters & Actions ─────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 card-shadow p-4 flex flex-wrap gap-3 items-center justify-between">
+        <div className="flex flex-wrap gap-3 items-center flex-1">
+          {/* Search */}
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
           <input
@@ -393,7 +465,21 @@ export default function ActivityLogPage() {
           ))}
         </select>
 
-        <span className="ml-auto text-xs text-slate-400 font-medium">{filtered.length} kayıt</span>
+        </div>
+        
+        <div className="flex items-center gap-3 ml-auto pl-3 border-l border-slate-100">
+          <span className="text-xs text-slate-400 font-medium">{filtered.length} kayıt</span>
+          {perms.canAccessAdmin && selectedIds.size > 0 && (
+            <button
+              onClick={() => handleDelete(selectedIds)}
+              disabled={deleting}
+              className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+            >
+              <Trash2 size={16} className={deleting ? 'animate-pulse' : ''} />
+              {deleting ? 'Siliniyor...' : `Seçilileri Sil (${selectedIds.size})`}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Log Table ─────────────────────────────────────── */}
@@ -414,6 +500,16 @@ export default function ActivityLogPage() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50/80 border-b border-slate-100">
                   <tr>
+                    {perms.canAccessAdmin && (
+                      <th className="px-5 py-3.5 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.size === filtered.length && filtered.length > 0}
+                          onChange={() => toggleAllSelection(filtered)}
+                          className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500 border-slate-300 cursor-pointer"
+                        />
+                      </th>
+                    )}
                     {['İşlem', 'Kullanıcı', 'Detay', 'Tarih / Saat'].map(h => (
                       <th key={h} className="px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
@@ -425,6 +521,16 @@ export default function ActivityLogPage() {
                     const Icon = cfg.icon;
                     return (
                       <tr key={log.id} onClick={() => setSelectedLog(log)} className="hover:bg-slate-50/80 transition-colors cursor-pointer">
+                        {perms.canAccessAdmin && (
+                          <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(log.id)}
+                              onChange={(e) => toggleSelection(e, log.id)}
+                              className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500 border-slate-300 cursor-pointer"
+                            />
+                          </td>
+                        )}
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2.5">
                             <div className={`h-8 w-8 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0`}>
@@ -463,7 +569,17 @@ export default function ActivityLogPage() {
                 const cfg = ACTION_CONFIG[log.action] || { label: log.action, icon: Activity, color: 'text-slate-500', bg: 'bg-slate-50', badge: 'bg-slate-100 text-slate-600' };
                 const Icon = cfg.icon;
                 return (
-                  <div key={log.id} onClick={() => setSelectedLog(log)} className="p-4 flex gap-3 cursor-pointer hover:bg-slate-50 transition-colors">
+                  <div key={log.id} onClick={() => setSelectedLog(log)} className="p-4 flex gap-3 cursor-pointer hover:bg-slate-50 transition-colors relative">
+                    {perms.canAccessAdmin && (
+                      <div className="absolute top-4 right-4" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(log.id)}
+                          onChange={(e) => toggleSelection(e, log.id)}
+                          className="w-5 h-5 rounded text-primary-600 focus:ring-primary-500 border-slate-300 cursor-pointer"
+                        />
+                      </div>
+                    )}
                     <div className={`h-10 w-10 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0 mt-0.5`}>
                       <Icon size={18} className={cfg.color} />
                     </div>
